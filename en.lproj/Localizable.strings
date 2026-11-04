@@ -74,3 +74,6 @@
 "적용할 위치" = "Apply to";
 "텍스트 커서를 찾지 못하면 마우스 포인터 옆에 표시" = "Show next to the pointer when the text cursor can't be found";
 "마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다." = "Not shown while Next to pointer is on, so the badges don't overlap.";
+"표시 시점" = "When to show";
+"입력기가 바뀔 때만 잠깐 표시" = "Show only briefly when the input source changes";
+"표시 시간 (ms)" = "Duration (ms)";

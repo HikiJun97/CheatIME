@@ -27,6 +27,8 @@ enum K {
     static let showPointer = "showPointer"
     static let showCaret = "showCaret"
     static let caretFallback = "caretFallback"
+    static let flashOnly = "flashOnly"
+    static let flashDuration = "flashDuration"
     static let styleTarget = "styleTarget"
     static let modes = ["fixed", "pointer", "caret"]
     static func style(_ mode: String, _ key: String) -> String { "\(mode).\(key)" }
@@ -44,6 +46,7 @@ func registerDefaults() {
         K.filterApps: "", K.soundName: "Tink", K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
         K.settingsTab: "badge", K.styleTarget: "fixed",
         K.showFixed: mode == "fixed", K.showPointer: mode == "pointer", K.showCaret: mode == "caret", K.caretFallback: true,
+        K.flashOnly: false, K.flashDuration: 1200.0,
     ]
     let style: [String: Any] = [
         K.shape: "rounded", K.fontSize: 15.0, K.dotSize: 12.0, K.opacity: 0.9, K.glass: false,

@@ -131,6 +131,8 @@ final class Overlay {
     private var caretFallback = true
     private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
+    private var flashing = false
+    private var flashID = 0
 
     func update() {
         let d = UserDefaults.standard
@@ -139,6 +141,7 @@ final class Overlay {
         let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
             || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
         let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
+            && (flashing || !d.bool(forKey: K.flashOnly))
 
         let showFixed = visible && d.bool(forKey: K.showFixed)
         fixedFollowsMouse = showFixed && d.string(forKey: K.displayMode) == "mouse"
@@ -164,6 +167,37 @@ final class Overlay {
         caretSize = visible && d.bool(forKey: K.showCaret) ? place(BadgeView(lang: lang, mode: "caret"), in: caretPanel) : nil
         if caretSize == nil { caretPanel.orderOut(nil) } else { caretTick() }
     }
+
+    func flash() {
+        let d = UserDefaults.standard
+        guard d.bool(forKey: K.flashOnly) else { return update() }
+        flashID += 1
+        let id = flashID
+        flashing = true
+        update()
+        allPanels.forEach { $0.alphaValue = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + d.double(forKey: K.flashDuration) / 1000) { [weak self] in
+            self?.fadeOut(id)
+        }
+    }
+
+    private func fadeOut(_ id: Int) {
+        guard id == flashID else { return }
+        let shown = allPanels.filter(\.isVisible)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.25
+            shown.forEach { $0.animator().alphaValue = 0 }
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, id == self.flashID else { return }
+                self.flashing = false
+                self.update()
+                shown.forEach { $0.alphaValue = 1 }
+            }
+        }
+    }
+
+    private var allPanels: [NSPanel] { fixedPanels + [pointerPanel, caretPanel] }
 
     func mouseMoved() {
         if let size = pointerSize { put(pointerPanel, at: pointerOrigin(for: size), size: size) }

@@ -67,11 +67,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func refresh() {
         let lang = currentLanguage()
         let d = UserDefaults.standard
-        if let lastLanguage, lastLanguage != lang, d.bool(forKey: K.sound) {
+        let changed = lastLanguage != nil && lastLanguage != lang
+        if changed, d.bool(forKey: K.sound) {
             NSSound(named: d.string(forKey: K.soundName) ?? "Tink")?.play()
         }
         lastLanguage = lang
-        overlay.update()
+        if changed { overlay.flash() } else { overlay.update() }
         showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
     }
 

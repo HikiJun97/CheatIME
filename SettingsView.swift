@@ -164,6 +164,8 @@ struct PositionTab: View {
     @AppStorage(K.showPointer) private var showPointer = false
     @AppStorage(K.showCaret) private var showCaret = false
     @AppStorage(K.caretFallback) private var caretFallback = true
+    @AppStorage(K.flashOnly) private var flashOnly = false
+    @AppStorage(K.flashDuration) private var flashDuration = 1200.0
     @AppStorage(K.displayMode) private var displayMode = "all"
     @AppStorage(K.displays) private var displays = ""
     @AppStorage(K.hAlign) private var hAlign = "right"
@@ -203,6 +205,11 @@ struct PositionTab: View {
                     Text("마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다.")
                         .foregroundStyle(.secondary)
                 }
+            }
+            Section("표시 시점") {
+                Toggle("입력기가 바뀔 때만 잠깐 표시", isOn: $flashOnly)
+                NumberSlider(title: "표시 시간 (ms)", value: $flashDuration, range: 300...5000)
+                    .disabled(!flashOnly)
             }
             if showFixed {
                 fixedSections
