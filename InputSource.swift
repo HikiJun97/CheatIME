@@ -12,21 +12,7 @@ func currentLanguage() -> String {
     return langs.first ?? ""
 }
 
-func enabledLanguages() -> [String] {
-    let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as! [TISInputSource]
-    var langs: [String] = []
-    for src in list {
-        let category: String? = property(src, kTISPropertyInputSourceCategory)
-        let selectable: Bool = property(src, kTISPropertyInputSourceIsSelectCapable) ?? false
-        let srcLangs: [String] = property(src, kTISPropertyInputSourceLanguages) ?? []
-        guard category == kTISCategoryKeyboardInputSource as String, selectable,
-              let lang = srcLangs.first, !langs.contains(lang) else { continue }
-        langs.append(lang)
-    }
-    return langs
-}
-
-struct InputSourceInfo: Hashable {
+nonisolated struct InputSourceInfo: Hashable, Codable {
     let id: String
     let name: String
     let lang: String
@@ -46,19 +32,43 @@ func enabledInputSources() -> [InputSourceInfo] {
 
 final class InputSources: ObservableObject {
     static let shared = InputSources()
-    @Published private(set) var languages = enabledLanguages()
-    @Published private(set) var sources = enabledInputSources()
+    nonisolated static let listArgument = "--list-input-sources"
+    @Published private(set) var sources: [InputSourceInfo] = []
+    @Published private(set) var languages: [String] = []
 
     private init() {
+        apply(enabledInputSources())
         DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name(kTISNotifyEnabledKeyboardInputSourcesChanged as String),
             object: nil, queue: .main
         ) { _ in
-            MainActor.assumeIsolated {
-                let shared = InputSources.shared
-                shared.languages = enabledLanguages()
-                shared.sources = enabledInputSources()
-            }
+            MainActor.assumeIsolated { InputSources.shared.reload() }
+        }
+        reload()
+    }
+
+    private func apply(_ new: [InputSourceInfo]) {
+        if new != sources { sources = new }
+        var langs: [String] = []
+        for source in new where !source.lang.isEmpty && !langs.contains(source.lang) {
+            langs.append(source.lang)
+        }
+        if langs != languages { languages = langs }
+    }
+
+    private func reload() {
+        guard let url = Bundle.main.executableURL else { return }
+        DispatchQueue.global().async {
+            let process = Process()
+            process.executableURL = url
+            process.arguments = [Self.listArgument]
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            guard (try? process.run()) != nil else { return }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            guard let list = try? JSONDecoder().decode([InputSourceInfo].self, from: data) else { return }
+            DispatchQueue.main.async { InputSources.shared.apply(list) }
         }
     }
 }

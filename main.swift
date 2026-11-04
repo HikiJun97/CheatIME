@@ -104,6 +104,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+if CommandLine.arguments.contains(InputSources.listArgument) {
+    FileHandle.standardOutput.write(try! JSONEncoder().encode(enabledInputSources()))
+    exit(0)
+}
+
 registerDefaults()
 let app = NSApplication.shared
 let delegate = AppDelegate()
