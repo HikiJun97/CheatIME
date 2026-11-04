@@ -22,17 +22,19 @@
 	<string>15.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/HikiJun97/CheatIME/releases/latest/download/appcast.xml</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>io.github.hikijun97.cheatime.language</string>
-			<key>UTTypeDescription</key>
-			<string>CheatIME Language</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
 			</array>
+			<key>UTTypeDescription</key>
+			<string>CheatIME Language</string>
+			<key>UTTypeIdentifier</key>
+			<string>io.github.hikijun97.cheatime.language</string>
 		</dict>
 	</array>
 </dict>

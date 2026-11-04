@@ -54,6 +54,7 @@ final class AppLanguage: ObservableObject {
 struct GeneralTab: View {
     @StateObject private var login = LoginItem()
     @StateObject private var language = AppLanguage()
+    @ObservedObject private var updates = Updates.shared
 
     private let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-"
 
@@ -88,7 +89,13 @@ struct GeneralTab: View {
                 }
             }
             Section {
-                LabeledContent("버전", value: version)
+                Toggle("자동으로 업데이트 확인", isOn: Binding(get: { updates.automaticallyChecks }, set: { updates.automaticallyChecks = $0 }))
+                LabeledContent("버전") {
+                    HStack {
+                        Text(version)
+                        Button("업데이트 확인…", action: updates.check)
+                    }
+                }
             }
         }
         .formStyle(.grouped)

@@ -13,11 +13,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         _ = InputSources.shared
+        _ = Updates.shared
         menu.addItem(withTitle: NSLocalizedString("설정…", comment: ""),
                      action: #selector(openSettings), keyEquivalent: ",").target = self
         showItem = menu.addItem(withTitle: NSLocalizedString("뱃지 표시", comment: ""),
                                 action: #selector(toggleBadge), keyEquivalent: "")
         showItem.target = self
+        menu.addItem(withTitle: NSLocalizedString("업데이트 확인…", comment: ""),
+                     action: #selector(checkForUpdates), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: NSLocalizedString("CheatIME 종료", comment: ""),
                      action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -85,6 +88,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleBadge() {
         let d = UserDefaults.standard
         d.set(!d.bool(forKey: K.visible), forKey: K.visible)
+    }
+
+    @objc func checkForUpdates() {
+        Updates.shared.check()
     }
 
     @objc func openSettings() {

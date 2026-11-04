@@ -28,6 +28,18 @@ jobs:
       - name: Build DMG and ZIP
         run: make dist
 
+      - name: Sign the update and write the appcast
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          test -n "$SPARKLE_PRIVATE_KEY"
+          key="$RUNNER_TEMP/sparkle.key"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$key"
+          make appcast SPARKLE_KEY="$key"
+          rm -f "$key"
+          cat dist/appcast.xml
+
       - uses: actions/upload-artifact@v4
         with:
           name: CheatIME

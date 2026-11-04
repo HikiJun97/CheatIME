@@ -21,6 +21,7 @@
 - 選んだアプリでだけバッジを表示できます。
 - アプリが最前面になったら、指定した入力ソースに自動で切り替えます。
 - 切り替え時にサウンドを鳴らしたり、ログイン時に自動で起動したりできます。
+- アプリ内でアップデートできます。自動確認はオフにできます。
 
 <p align="center"><img src="docs/settings-ja.png" width="560" alt="バッジの設定"></p>
 <p align="center"><img src="docs/rules-ja.png" width="560" alt="自動切り替えルール"></p>
@@ -40,7 +41,7 @@ macOS 15 以降、Apple シリコンまたは Intel Mac
 
 ## 使い方
 
-- **メニューバーアイコン**：設定…（⌘,）、バッジを表示、CheatIME を終了
+- **メニューバーアイコン**：設定…（⌘,）、バッジを表示、アップデートを確認…、CheatIME を終了
 - **バッジ**：クリックで非表示、ドラッグで移動、右クリックでメニューを表示
 - メニューバーアイコンが見当たらないときは、Spotlight や Finder から CheatIME をもう一度開くと設定ウインドウが表示されます。
 
@@ -48,7 +49,7 @@ macOS 15 以降、Apple シリコンまたは Intel Mac
 
 ## ソースからビルド
 
-macOS 27 SDK（Xcode または Command Line Tools）が必要です。
+macOS 27 SDK（Xcode または Command Line Tools）が必要です。初回のビルド時に Sparkle フレームワークをダウンロードします。
 
 ```sh
 git clone https://github.com/HikiJun97/CheatIME.git
@@ -68,7 +69,7 @@ defaults delete io.github.hikijun97.cheatime
 
 ## プライバシー
 
-CheatIME はキー入力を読み取らず、ネットワークにも接続しません。アクセシビリティへのアクセスは、テキストカーソルの位置を調べるためだけに使います。
+CheatIME はキー入力を読み取りません。ネットワークに接続するのはアップデートを確認するときだけで、設定 → 一般でオフにできます。アクセシビリティへのアクセスは、テキストカーソルの位置を調べるためだけに使います。
 
 ## 影響を受けたプロジェクト
 
