@@ -83,7 +83,7 @@
 "시스템 언어" = "System Language";
 "CheatIME를 다시 시작하면 적용됩니다." = "Takes effect after CheatIME restarts.";
 "다시 시작" = "Restart";
-"입력 소스 다시 불러오기" = "Reload Input Sources";
+"입력 소스 새로고침" = "Refresh Input Sources";
 "위로 이동" = "Move Up";
 "아래로 이동" = "Move Down";
 "목록에서 제거" = "Remove from List";

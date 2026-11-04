@@ -235,7 +235,7 @@ struct StyleSections: View {
                         LanguageRow(lang: lang, style: preview(""), order: $order)
                     }
                 }
-                Button("입력 소스 다시 불러오기") { InputSources.shared.reload() }
+                Button("입력 소스 새로고침") { InputSources.shared.reload() }
             }
         }
         Section("뱃지 스타일") {
@@ -435,7 +435,20 @@ struct LanguageRow: View {
 
     var body: some View {
         GridRow {
-            Text(Locale.current.localizedString(forLanguageCode: lang) ?? lang)
+            HStack(spacing: 6) {
+                Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
+                Text(Locale.current.localizedString(forLanguageCode: lang) ?? lang)
+            }
+            .contentShape(Rectangle())
+            .onDrag {
+                let provider = NSItemProvider()
+                let data = Data(lang.utf8)
+                provider.registerDataRepresentation(forTypeIdentifier: Self.dragType, visibility: .ownProcess) { done in
+                    done(data, nil)
+                    return nil
+                }
+                return provider
+            }
             TextField("표시 글자", text: $label)
                 .labelsHidden()
                 .roundedInputBorder()
@@ -457,6 +470,24 @@ struct LanguageRow: View {
             .menuIndicator(.hidden)
             .fixedSize()
         }
+        .onDrop(of: [Self.dragType], isTargeted: nil) { providers in
+            guard let provider = providers.first else { return false }
+            _ = provider.loadDataRepresentation(forTypeIdentifier: Self.dragType) { data, _ in
+                guard let data, let dragged = String(data: data, encoding: .utf8) else { return }
+                DispatchQueue.main.async { drop(dragged) }
+            }
+            return true
+        }
+    }
+
+    private static let dragType = "io.github.hikijun97.cheatime.language"
+
+    private func drop(_ dragged: String) {
+        var langs = list
+        guard dragged != lang, let from = langs.firstIndex(of: dragged), let to = langs.firstIndex(of: lang) else { return }
+        langs.remove(at: from)
+        langs.insert(dragged, at: to)
+        order = langs.joined(separator: ",")
     }
 
     private var list: [String] { order.split(separator: ",").map(String.init) }
