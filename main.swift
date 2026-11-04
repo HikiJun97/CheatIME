@@ -49,8 +49,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: onChange)
-        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [overlay] _ in
-            MainActor.assumeIsolated { overlay.tick() }
+        let moves: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
+        NSEvent.addGlobalMonitorForEvents(matching: moves) { [overlay] _ in
+            MainActor.assumeIsolated { overlay.mouseMoved() }
+        }
+        NSEvent.addLocalMonitorForEvents(matching: moves) { [overlay] event in
+            MainActor.assumeIsolated { overlay.mouseMoved() }
+            return event
+        }
+        Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [overlay] _ in
+            MainActor.assumeIsolated { overlay.caretTick() }
         }
 
         refresh()

@@ -151,8 +151,19 @@ final class Overlay {
         }
     }
 
-    func tick() {
-        guard UserDefaults.standard.string(forKey: K.positionMode) != "fixed" else { return followMouse() }
+    func mouseMoved() {
+        switch UserDefaults.standard.string(forKey: K.positionMode) {
+        case "pointer": follow()
+        case "fixed": followMouse()
+        default: break
+        }
+    }
+
+    func caretTick() {
+        if UserDefaults.standard.string(forKey: K.positionMode) == "caret" { follow() }
+    }
+
+    private func follow() {
         guard let panel = panels.first, panel.isVisible else { return }
         let size = NSSize(width: panel.frame.width - 2 * inset, height: panel.frame.height - 2 * inset)
         let origin = followOrigin(for: size)
