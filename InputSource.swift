@@ -26,6 +26,35 @@ func enabledLanguages() -> [String] {
     return langs
 }
 
+struct InputSourceInfo: Hashable {
+    let id: String
+    let name: String
+    let lang: String
+}
+
+func enabledInputSources() -> [InputSourceInfo] {
+    let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as! [TISInputSource]
+    return list.compactMap { src in
+        let category: String? = property(src, kTISPropertyInputSourceCategory)
+        let selectable: Bool = property(src, kTISPropertyInputSourceIsSelectCapable) ?? false
+        guard category == kTISCategoryKeyboardInputSource as String, selectable,
+              let id: String = property(src, kTISPropertyInputSourceID) else { return nil }
+        let langs: [String] = property(src, kTISPropertyInputSourceLanguages) ?? []
+        return InputSourceInfo(id: id, name: property(src, kTISPropertyLocalizedName) ?? id, lang: langs.first ?? "")
+    }
+}
+
+func currentInputSourceID() -> String {
+    property(TISCopyCurrentKeyboardInputSource().takeRetainedValue(), kTISPropertyInputSourceID) ?? ""
+}
+
+func selectInputSource(_ id: String) {
+    guard id != currentInputSourceID() else { return }
+    let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
+    let list = TISCreateInputSourceList(filter, false).takeRetainedValue() as! [TISInputSource]
+    if let src = list.first { TISSelectInputSource(src) }
+}
+
 extension NSScreen {
     var uuid: String {
         let id = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as! CGDirectDisplayID
