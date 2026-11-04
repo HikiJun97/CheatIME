@@ -84,7 +84,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .miniaturizable],
                                   backing: .buffered, defer: false)
             window.contentViewController = controller
-            window.titleVisibility = .hidden
             window.toolbarStyle = .unified
             window.center()
             window.isReleasedWhenClosed = false

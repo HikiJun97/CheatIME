@@ -19,6 +19,7 @@ struct SettingsView: View {
         }
         .frame(width: 620, height: 620)
         .navigationTitle(Text(panes.first { $0.id == tab }?.title ?? "뱃지"))
+        .toolbar(removing: .title)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker("설정", selection: $tab) {
