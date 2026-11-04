@@ -14,8 +14,16 @@ $(APP): *.swift Info.plist *.lproj/* Resources/*
 	cp -R *.lproj Resources/* $(APP)/Contents/Resources/
 	codesign --force --sign - $(APP)
 
+DIST := dist
+
 dist: $(APP)
-	ditto -c -k --keepParent $(APP) CheatIME-$(VERSION).zip
+	rm -rf $(DIST) $(BUILD)/dmg
+	mkdir -p $(DIST) $(BUILD)/dmg
+	ditto -c -k --keepParent $(APP) $(DIST)/CheatIME-$(VERSION).zip
+	cp -R $(APP) $(BUILD)/dmg/
+	ln -s /Applications $(BUILD)/dmg/Applications
+	hdiutil create -quiet -volname CheatIME -srcfolder $(BUILD)/dmg -fs HFS+ -format UDZO -ov $(DIST)/CheatIME-$(VERSION).dmg
+	cd $(DIST) && shasum -a 256 CheatIME-$(VERSION).dmg CheatIME-$(VERSION).zip > SHA256SUMS.txt
 
 install: $(APP)
 	-pkill -x CheatIME
@@ -28,6 +36,6 @@ uninstall:
 	rm -rf /Applications/$(APP)
 
 clean:
-	rm -rf $(APP) $(BUILD) CheatIME-*.zip
+	rm -rf $(APP) $(BUILD) $(DIST)
 
 .PHONY: dist install uninstall clean

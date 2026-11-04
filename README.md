@@ -44,8 +44,8 @@ macOS 15 Sequoia or later, on Apple silicon or Intel (universal binary).
 
 ## Install
 
-1. Download `CheatIME-<version>.zip` from [Releases](https://github.com/HikiJun97/CheatIME/releases).
-2. Unzip it and move `CheatIME.app` to `/Applications`.
+1. Download `CheatIME-<version>.dmg` from [Releases](https://github.com/HikiJun97/CheatIME/releases).
+2. Open the DMG and drag **CheatIME** to **Applications**.
 3. CheatIME is not notarized by Apple, so macOS blocks the first launch. Allow it in one of these ways:
    - Open CheatIME once. After macOS blocks it, go to **System Settings → Privacy & Security**, click **Open Anyway** next to the CheatIME message, and confirm.
    - Or run this in Terminal:
@@ -76,7 +76,7 @@ git clone https://github.com/HikiJun97/CheatIME.git
 cd CheatIME
 make            # build CheatIME.app (universal)
 make install    # copy to /Applications and launch
-make dist       # create CheatIME-<version>.zip
+make dist       # create the DMG and ZIP in dist/
 ```
 
 ## Uninstall

@@ -44,8 +44,8 @@ macOS 15 Sequoia 以降。Apple シリコンと Intel Mac の両方に対応し�
 
 ## インストール
 
-1. [Releases](https://github.com/HikiJun97/CheatIME/releases) から `CheatIME-<バージョン>.zip` をダウンロードします。
-2. ZIP ファイルを展開し、`CheatIME.app` を `/Applications` に移動します。
+1. [Releases](https://github.com/HikiJun97/CheatIME/releases) から `CheatIME-<バージョン>.dmg` をダウンロードします。
+2. DMG を開き、**CheatIME**を**Applications**にドラッグします。
 3. CheatIME は Apple の公証を受けていないため、初回起動時に macOS にブロックされます。次のいずれかの方法で許可してください。
    - CheatIME を一度開きます。ブロックされたら**システム設定 → プライバシーとセキュリティ**を開き、CheatIME についてのメッセージの横にある**このまま開く**をクリックし、確認ダイアログで許可します。
    - または、ターミナルで次のコマンドを実行します。
@@ -76,7 +76,7 @@ git clone https://github.com/HikiJun97/CheatIME.git
 cd CheatIME
 make            # CheatIME.app をビルド（ユニバーサル）
 make install    # /Applications にコピーして起動
-make dist       # CheatIME-<バージョン>.zip を作成
+make dist       # dist/ に DMG と ZIP を作成
 ```
 
 ## アンインストール
