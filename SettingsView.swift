@@ -199,7 +199,8 @@ struct StyleSections: View {
     @AppStorage private var borderWidth: Double
     @AppStorage private var borderColor: String
 
-    @ObservedObject private var inputs = InputSources.shared
+    @AppStorage(K.badgeLanguages) private var order = ""
+    private var languages: [String] { order.split(separator: ",").map(String.init) }
 
     init(scope: String) {
         self.scope = scope
@@ -225,14 +226,16 @@ struct StyleSections: View {
                         Text("글자").gridColumnAlignment(.center)
                         Text("숨기기").gridColumnAlignment(.center)
                         Text("미리보기").frame(maxWidth: .infinity, alignment: .trailing)
+                        Text(verbatim: "")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     Divider()
-                    ForEach(inputs.languages, id: \.self) { lang in
-                        LanguageRow(lang: lang, style: preview(""))
+                    ForEach(languages, id: \.self) { lang in
+                        LanguageRow(lang: lang, style: preview(""), order: $order)
                     }
                 }
+                Button("입력 소스 다시 불러오기") { InputSources.shared.reload() }
             }
         }
         Section("뱃지 스타일") {
@@ -240,7 +243,7 @@ struct StyleSections: View {
                 HStack {
                     Text("미리보기")
                     Spacer()
-                    ForEach(inputs.languages, id: \.self) { preview($0) }
+                    ForEach(languages, id: \.self) { preview($0) }
                 }
             }
             Picker("모양", selection: $shape) {
@@ -413,14 +416,16 @@ struct NumberSlider: View {
 struct LanguageRow: View {
     let lang: String
     let style: BadgeView
+    @Binding var order: String
     @AppStorage private var label: String
     @AppStorage private var bg: String
     @AppStorage private var fg: String
     @AppStorage private var hidden: Bool
 
-    init(lang: String, style: BadgeView) {
+    init(lang: String, style: BadgeView, order: Binding<String>) {
         self.lang = lang
         self.style = style
+        _order = order
         let d = langDefaults(lang)
         _label = AppStorage(wrappedValue: d.label, K.label(lang))
         _bg = AppStorage(wrappedValue: d.bg, K.bg(lang))
@@ -440,7 +445,27 @@ struct LanguageRow: View {
             Toggle("숨기기", isOn: $hidden).labelsHidden()
             preview
                 .frame(maxWidth: .infinity, alignment: .trailing)
+            Menu {
+                Button("위로 이동") { move(by: -1) }.disabled(list.first == lang)
+                Button("아래로 이동") { move(by: 1) }.disabled(list.last == lang)
+                Divider()
+                Button("목록에서 제거") { order = list.filter { $0 != lang }.joined(separator: ",") }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
+    }
+
+    private var list: [String] { order.split(separator: ",").map(String.init) }
+
+    private func move(by offset: Int) {
+        var langs = list
+        guard let i = langs.firstIndex(of: lang), langs.indices.contains(i + offset) else { return }
+        langs.swapAt(i, i + offset)
+        order = langs.joined(separator: ",")
     }
 
     private var preview: BadgeView {

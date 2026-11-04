@@ -12,7 +12,7 @@ func currentLanguage() -> String {
     return langs.first ?? ""
 }
 
-nonisolated struct InputSourceInfo: Hashable, Codable {
+struct InputSourceInfo: Hashable {
     let id: String
     let name: String
     let lang: String
@@ -30,46 +30,49 @@ func enabledInputSources() -> [InputSourceInfo] {
     }
 }
 
+func badgeLanguages() -> [String] {
+    (UserDefaults.standard.string(forKey: K.badgeLanguages) ?? "").split(separator: ",").map(String.init)
+}
+
 final class InputSources: ObservableObject {
     static let shared = InputSources()
-    nonisolated static let listArgument = "--list-input-sources"
-    @Published private(set) var sources: [InputSourceInfo] = []
-    @Published private(set) var languages: [String] = []
+    @Published private(set) var sources = enabledInputSources()
 
     private init() {
-        apply(enabledInputSources())
+        if UserDefaults.standard.string(forKey: K.badgeLanguages) == nil {
+            addLanguages(languages)
+        }
         DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name(kTISNotifyEnabledKeyboardInputSourcesChanged as String),
             object: nil, queue: .main
         ) { _ in
-            MainActor.assumeIsolated { InputSources.shared.reload() }
+            MainActor.assumeIsolated {
+                let shared = InputSources.shared
+                let old = shared.languages
+                shared.sources = enabledInputSources()
+                shared.addLanguages(shared.languages.filter { !old.contains($0) })
+            }
         }
-        reload()
     }
 
-    private func apply(_ new: [InputSourceInfo]) {
-        if new != sources { sources = new }
+    private var languages: [String] {
         var langs: [String] = []
-        for source in new where !source.lang.isEmpty && !langs.contains(source.lang) {
+        for source in sources where !source.lang.isEmpty && !langs.contains(source.lang) {
             langs.append(source.lang)
         }
-        if langs != languages { languages = langs }
+        return langs
     }
 
-    private func reload() {
-        guard let url = Bundle.main.executableURL else { return }
-        DispatchQueue.global().async {
-            let process = Process()
-            process.executableURL = url
-            process.arguments = [Self.listArgument]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            guard (try? process.run()) != nil else { return }
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            guard let list = try? JSONDecoder().decode([InputSourceInfo].self, from: data) else { return }
-            DispatchQueue.main.async { InputSources.shared.apply(list) }
-        }
+    func reload() {
+        sources = enabledInputSources()
+        addLanguages(languages)
+    }
+
+    private func addLanguages(_ langs: [String]) {
+        let list = badgeLanguages()
+        let missing = langs.filter { !list.contains($0) }
+        guard !missing.isEmpty else { return }
+        UserDefaults.standard.set((list + missing).joined(separator: ","), forKey: K.badgeLanguages)
     }
 }
 

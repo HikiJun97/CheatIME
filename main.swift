@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var lastLanguage: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        _ = InputSources.shared
         menu.addItem(withTitle: NSLocalizedString("설정…", comment: ""),
                      action: #selector(openSettings), keyEquivalent: ",").target = self
         showItem = menu.addItem(withTitle: NSLocalizedString("뱃지 표시", comment: ""),
@@ -102,11 +103,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow?.makeKeyAndOrderFront(nil)
         settingsWindow?.orderFrontRegardless()
     }
-}
-
-if CommandLine.arguments.contains(InputSources.listArgument) {
-    FileHandle.standardOutput.write(try! JSONEncoder().encode(enabledInputSources()))
-    exit(0)
 }
 
 registerDefaults()

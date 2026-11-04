@@ -15,6 +15,7 @@ enum K {
     static let glass = "glass"
     static let appFilter = "appFilter"
     static let filterApps = "filterApps"
+    static let badgeLanguages = "badgeLanguages"
     static let rules = "rules"
     static let sound = "sound"
     static let soundName = "soundName"
