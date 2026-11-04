@@ -4,6 +4,7 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let overlay = Overlay()
+    let switcher = Switcher()
     let menu = NSMenu()
     var statusItem: NSStatusItem!
     var showItem: NSMenuItem!
@@ -38,7 +39,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: onChange)
         NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main, using: onChange)
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let app = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier ?? ""
+            MainActor.assumeIsolated {
+                self?.switcher.appActivated(app)
+                self?.refresh()
+            }
+        }
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: onChange)
         Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [overlay] _ in
