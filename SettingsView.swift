@@ -25,9 +25,20 @@ struct SettingsView: View {
                 Picker("설정", selection: $tab) {
                     ForEach(panes, id: \.id) { Text($0.title).tag($0.id) }
                 }
-                .pickerStyle(.segmented)
+                .paneSwitcherStyle()
                 .labelsHidden()
             }
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func paneSwitcherStyle() -> some View {
+        if #available(macOS 27, *) {
+            pickerStyle(.tabs)
+        } else {
+            pickerStyle(.segmented)
         }
     }
 }
