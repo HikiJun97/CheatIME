@@ -8,6 +8,7 @@ struct BadgeView: View {
     var fontSize: Double
     var opacity: Double
     var glass: Bool
+    var inset: Double = 0
 
     var body: some View {
         let h = fontSize * 1.8
@@ -38,6 +39,7 @@ struct BadgeView: View {
             }
         }
         .opacity(opacity)
+        .padding(inset)
         .fixedSize()
     }
 }
@@ -46,13 +48,16 @@ extension BadgeView {
     init(lang: String) {
         let d = UserDefaults.standard
         let l = langDefaults(lang)
+        let fontSize = d.double(forKey: K.fontSize)
+        let glass = d.bool(forKey: K.glass)
         self.init(label: d.string(forKey: K.label(lang)) ?? l.label,
                   bg: Color(hex: d.string(forKey: K.bg(lang)) ?? l.bg),
                   fg: Color(hex: d.string(forKey: K.fg(lang)) ?? l.fg),
                   shape: d.string(forKey: K.shape) ?? "",
-                  fontSize: d.double(forKey: K.fontSize),
+                  fontSize: fontSize,
                   opacity: d.double(forKey: K.opacity),
-                  glass: d.bool(forKey: K.glass))
+                  glass: glass,
+                  inset: glass ? max(8, fontSize * 0.5) : 0)
     }
 }
 
@@ -94,6 +99,7 @@ final class Overlay {
     var contextMenu: NSMenu?
     private var panels: [NSPanel] = []
     private var lastMouseScreen: NSScreen?
+    private var inset = 0.0
 
     func update() {
         let d = UserDefaults.standard
@@ -101,13 +107,15 @@ final class Overlay {
         let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang))
         let screens = visible ? targetScreens() : []
         let badge = BadgeView(lang: lang)
+        inset = badge.inset
 
         while panels.count < screens.count { panels.append(makePanel()) }
         for (i, panel) in panels.enumerated() {
             guard i < screens.count else { panel.orderOut(nil); continue }
             let host = panel.contentView as! BadgeHost
             host.rootView = badge
-            panel.setFrame(frame(for: host.fittingSize, on: screens[i]), display: true)
+            let size = NSSize(width: host.fittingSize.width - 2 * inset, height: host.fittingSize.height - 2 * inset)
+            panel.setFrame(frame(for: size, on: screens[i]).insetBy(dx: -inset, dy: -inset), display: true)
             panel.orderFrontRegardless()
         }
     }
@@ -159,7 +167,7 @@ final class Overlay {
     }
 
     private func savePosition(of panel: NSPanel) {
-        let f = panel.frame
+        let f = panel.frame.insetBy(dx: inset, dy: inset)
         let center = NSPoint(x: f.midX, y: f.midY)
         guard let v = (NSScreen.screens.first { $0.frame.contains(center) } ?? panel.screen)?.visibleFrame
         else { return }
