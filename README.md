@@ -17,13 +17,13 @@ If you type in more than one language and spend your day in a terminal, Vim, or 
 - Always on top, on every Space and over full-screen apps
 - Works with any input method (Apple, Gureum, Kotoeri, and others) because it detects the language, not the input method
 - Per-language label, background color, and text color, plus an option to hide the badge for specific languages
-- Shapes: rounded rectangle, capsule, circle, or a minimal dot; font size, opacity, and an optional Liquid Glass look (macOS 26 or later)
+- A choice of shapes (rounded rectangle, capsule, circle, or minimal dot), adjustable font size and opacity, and an optional Liquid Glass look (macOS 26 or later)
 - Optional sound when the input source changes, using any of the macOS system sounds (macOS has no built-in option for this)
 
 **Placement**
-- Fixed: a 3×3 alignment grid with margins, on all displays, the display with the pointer, or displays you pick. You can also just drag the badge.
-- Next to the pointer: the badge follows the mouse pointer.
-- Next to the text cursor: the badge sits beside the text cursor. This needs Accessibility access. In apps that don't report a text cursor (some terminals, for example), it falls back to the pointer.
+- Fixed: a 3×3 alignment grid with margins, on all displays, the display with the pointer, or the displays you choose. You can also just drag the badge.
+- Next to pointer: the badge follows the mouse pointer.
+- Next to text cursor: the badge sits beside the text cursor. This requires Accessibility access. In apps that don't report a text cursor (some terminals, for example), it falls back to the pointer.
 
 **Apps**
 - Show the badge only when one of the apps you check is in front. Checked apps are listed first.
@@ -57,13 +57,13 @@ To start CheatIME automatically, turn on **Open at login** in Settings → Gener
 
 ## Usage
 
-- **Menu bar icon**: Settings… (⌘,), Show Badge, Quit
+- **Menu bar icon**: Settings… (⌘,), Show Badge, Quit CheatIME
 - **Badge**: click to hide, drag to move, right-click for the menu
 - If the menu bar icon is hidden (behind the notch, or turned off in **Allow in the Menu Bar**), open CheatIME again from Spotlight or Finder to bring up Settings.
 
 ### Accessibility access
 
-Only the **Next to the text cursor** placement needs it. Choose it in Settings → Position, then allow CheatIME in **System Settings → Privacy & Security → Accessibility**.
+Only the **Next to text cursor** placement needs it. Select it in Settings → Position, then allow CheatIME in **System Settings → Privacy & Security → Accessibility**.
 
 Because CheatIME is not signed with an Apple Developer ID, macOS treats every new version as a different app. After you update, remove CheatIME from the Accessibility list and allow it again.
 
@@ -91,7 +91,7 @@ If you turned on **Open at login** or granted Accessibility access, remove Cheat
 
 ## Privacy
 
-CheatIME asks macOS which input source is active and switches it when one of your rules applies, using the Text Input Sources API. It does not monitor keystrokes and makes no network connections. With **Next to the text cursor**, it uses Accessibility access only to read where the text cursor is. Settings are stored in the standard user defaults.
+CheatIME uses the Text Input Sources API to check which input source is active and to switch it when one of your rules applies. It does not monitor keystrokes and makes no network connections. With **Next to text cursor**, it uses Accessibility access only to read where the text cursor is. Settings are stored in standard user defaults.
 
 ## License
 
