@@ -22,9 +22,10 @@ If you type in more than one language and spend your day in a terminal, Vim, or 
 - Optional sound when the input source changes, using any of the macOS system sounds (macOS has no built-in option for this)
 
 **Placement**
+- Turn on any combination of the three positions below, for example a fixed badge in the corner plus one next to the text cursor. Each position has its own shape, size, opacity, border, and Liquid Glass setting.
 - Fixed: a 3×3 alignment grid with margins, on all displays, the display with the pointer, or the displays you choose. You can also just drag the badge.
 - Next to pointer: the badge follows the mouse pointer.
-- Next to text cursor: the badge sits beside the text cursor. This requires Accessibility access. In apps that don't report a text cursor (some terminals, for example), it falls back to the pointer.
+- Next to text cursor: the badge sits beside the text cursor. This requires Accessibility access. In apps that don't report a text cursor (some terminals, for example), it falls back to the pointer, or stays hidden if Next to pointer is also on.
 
 **Apps**
 - Show the badge only when one of the apps you check is in front. Checked apps are listed first.

@@ -66,22 +66,23 @@ struct BadgeView: View {
 }
 
 extension BadgeView {
-    init(lang: String) {
+    init(lang: String, mode: String) {
         let d = UserDefaults.standard
         let l = langDefaults(lang)
-        let fontSize = d.double(forKey: K.fontSize)
-        let glass = d.bool(forKey: K.glass)
+        func key(_ name: String) -> String { K.style(mode, name) }
+        let fontSize = d.double(forKey: key(K.fontSize))
+        let glass = d.bool(forKey: key(K.glass))
         self.init(label: d.string(forKey: K.label(lang)) ?? l.label,
                   bg: Color(hex: d.string(forKey: K.bg(lang)) ?? l.bg),
                   fg: Color(hex: d.string(forKey: K.fg(lang)) ?? l.fg),
-                  shape: d.string(forKey: K.shape) ?? "",
+                  shape: d.string(forKey: key(K.shape)) ?? "",
                   fontSize: fontSize,
-                  dotSize: d.double(forKey: K.dotSize),
-                  opacity: d.double(forKey: K.opacity),
+                  dotSize: d.double(forKey: key(K.dotSize)),
+                  opacity: d.double(forKey: key(K.opacity)),
                   glass: glass,
-                  border: d.string(forKey: K.border) ?? "none",
-                  borderWidth: d.double(forKey: K.borderWidth),
-                  borderColor: Color(hex: d.string(forKey: K.borderColor) ?? "#FFFFFF"),
+                  border: d.string(forKey: key(K.border)) ?? "none",
+                  borderWidth: d.double(forKey: key(K.borderWidth)),
+                  borderColor: Color(hex: d.string(forKey: key(K.borderColor)) ?? "#FFFFFF"),
                   inset: glass ? max(8, fontSize * 0.5) : 0)
     }
 }
@@ -122,9 +123,13 @@ final class BadgeHost: NSHostingView<BadgeView> {
 
 final class Overlay {
     var contextMenu: NSMenu?
-    private var panels: [NSPanel] = []
+    private var fixedPanels: [NSPanel] = []
+    private lazy var pointerPanel = makePanel(follow: true)
+    private lazy var caretPanel = makePanel(follow: true)
+    private var pointerSize: NSSize?
+    private var caretSize: NSSize?
+    private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
-    private var inset = 0.0
 
     func update() {
         let d = UserDefaults.standard
@@ -133,64 +138,76 @@ final class Overlay {
         let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
             || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
         let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
-        let follow = d.string(forKey: K.positionMode) != "fixed"
-        let screens = visible ? (follow ? [screenUnderMouse()] : targetScreens()) : []
-        let badge = BadgeView(lang: lang)
-        inset = badge.inset
 
-        while panels.count < screens.count { panels.append(makePanel()) }
-        for (i, panel) in panels.enumerated() {
+        let showFixed = visible && d.bool(forKey: K.showFixed)
+        fixedFollowsMouse = showFixed && d.string(forKey: K.displayMode) == "mouse"
+        let screens = showFixed ? targetScreens() : []
+        let fixed = BadgeView(lang: lang, mode: "fixed")
+        while fixedPanels.count < screens.count { fixedPanels.append(makePanel(follow: false)) }
+        for (i, panel) in fixedPanels.enumerated() {
             guard i < screens.count else { panel.orderOut(nil); continue }
-            let host = panel.contentView as! BadgeHost
-            host.rootView = badge
-            let size = NSSize(width: host.fittingSize.width - 2 * inset, height: host.fittingSize.height - 2 * inset)
-            let rect = follow ? NSRect(origin: followOrigin(for: size), size: size) : frame(for: size, on: screens[i])
-            panel.ignoresMouseEvents = follow
-            panel.setFrame(rect.insetBy(dx: -inset, dy: -inset), display: true)
+            let size = place(fixed, in: panel)
+            put(panel, at: frame(for: size, on: screens[i]).origin, size: size)
             panel.orderFrontRegardless()
         }
+
+        pointerSize = visible && d.bool(forKey: K.showPointer) ? place(BadgeView(lang: lang, mode: "pointer"), in: pointerPanel) : nil
+        if let size = pointerSize {
+            put(pointerPanel, at: pointerOrigin(for: size), size: size)
+            pointerPanel.orderFrontRegardless()
+        } else {
+            pointerPanel.orderOut(nil)
+        }
+
+        caretSize = visible && d.bool(forKey: K.showCaret) ? place(BadgeView(lang: lang, mode: "caret"), in: caretPanel) : nil
+        if caretSize == nil { caretPanel.orderOut(nil) } else { caretTick() }
     }
 
     func mouseMoved() {
-        switch UserDefaults.standard.string(forKey: K.positionMode) {
-        case "pointer": follow()
-        case "fixed": followMouse()
-        default: break
-        }
+        if let size = pointerSize { put(pointerPanel, at: pointerOrigin(for: size), size: size) }
+        if fixedFollowsMouse { followMouse() }
     }
 
     func caretTick() {
-        if UserDefaults.standard.string(forKey: K.positionMode) == "caret" { follow() }
-    }
-
-    private func follow() {
-        guard let panel = panels.first, panel.isVisible else { return }
-        let size = NSSize(width: panel.frame.width - 2 * inset, height: panel.frame.height - 2 * inset)
-        let origin = followOrigin(for: size)
-        let target = NSPoint(x: origin.x - inset, y: origin.y - inset)
-        if panel.frame.origin != target { panel.setFrameOrigin(target) }
-    }
-
-    private func followOrigin(for size: NSSize) -> NSPoint {
-        let anchor: NSPoint
-        var p: NSPoint
-        if UserDefaults.standard.string(forKey: K.positionMode) == "caret", let caret = caretRect() {
-            anchor = caret.origin
-            p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
+        guard let size = caretSize else { return }
+        if let caret = caretRect() {
+            let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
+            put(caretPanel, at: clamped(p, size: size, near: caret.origin), size: size)
+        } else if pointerSize != nil {
+            caretPanel.orderOut(nil)
+            return
         } else {
-            anchor = NSEvent.mouseLocation
-            p = NSPoint(x: anchor.x + 16, y: anchor.y - 16 - size.height)
+            put(caretPanel, at: pointerOrigin(for: size), size: size)
         }
+        if !caretPanel.isVisible { caretPanel.orderFrontRegardless() }
+    }
+
+    private func place(_ badge: BadgeView, in panel: NSPanel) -> NSSize {
+        let host = panel.contentView as! BadgeHost
+        host.rootView = badge
+        let fit = host.fittingSize
+        return NSSize(width: fit.width - 2 * badge.inset, height: fit.height - 2 * badge.inset)
+    }
+
+    private func put(_ panel: NSPanel, at origin: NSPoint, size: NSSize) {
+        let inset = (panel.contentView as! BadgeHost).rootView.inset
+        let rect = NSRect(origin: origin, size: size).insetBy(dx: -inset, dy: -inset)
+        if panel.frame != rect { panel.setFrame(rect, display: true) }
+    }
+
+    private func pointerOrigin(for size: NSSize) -> NSPoint {
+        let mouse = NSEvent.mouseLocation
+        return clamped(NSPoint(x: mouse.x + 16, y: mouse.y - 16 - size.height), size: size, near: mouse)
+    }
+
+    private func clamped(_ p: NSPoint, size: NSSize, near anchor: NSPoint) -> NSPoint {
         let screen = NSScreen.screens.first { NSMouseInRect(anchor, $0.frame, false) } ?? NSScreen.screens[0]
         let v = screen.visibleFrame
-        p.x = min(max(p.x, v.minX), v.maxX - size.width)
-        p.y = min(max(p.y, v.minY), v.maxY - size.height)
-        return p
+        return NSPoint(x: min(max(p.x, v.minX), v.maxX - size.width), y: min(max(p.y, v.minY), v.maxY - size.height))
     }
 
     private func followMouse() {
-        guard UserDefaults.standard.string(forKey: K.displayMode) == "mouse",
-              NSEvent.pressedMouseButtons == 0 else { return }
+        guard NSEvent.pressedMouseButtons == 0 else { return }
         let screen = screenUnderMouse()
         if screen != lastMouseScreen {
             lastMouseScreen = screen
@@ -235,6 +252,7 @@ final class Overlay {
     }
 
     private func savePosition(of panel: NSPanel) {
+        let inset = (panel.contentView as! BadgeHost).rootView.inset
         let f = panel.frame.insetBy(dx: inset, dy: inset)
         let center = NSPoint(x: f.midX, y: f.midY)
         guard let v = (NSScreen.screens.first { $0.frame.contains(center) } ?? panel.screen)?.visibleFrame
@@ -247,7 +265,7 @@ final class Overlay {
         d.set(max(0, bottom ? f.minY - v.minY : v.maxY - f.maxY), forKey: K.marginY)
     }
 
-    private func makePanel() -> NSPanel {
+    private func makePanel(follow: Bool) -> NSPanel {
         let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
         panel.level = .screenSaver
@@ -256,7 +274,8 @@ final class Overlay {
         panel.backgroundColor = .clear
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
-        let host = BadgeHost(rootView: BadgeView(lang: ""))
+        panel.ignoresMouseEvents = follow
+        let host = BadgeHost(rootView: BadgeView(lang: "", mode: "fixed"))
         host.menu = contextMenu
         host.onClick = { UserDefaults.standard.set(false, forKey: K.visible) }
         host.onDrop = { [weak self, weak panel] in

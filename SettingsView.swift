@@ -44,77 +44,15 @@ extension View {
 }
 
 struct BadgeTab: View {
-    @AppStorage(K.shape) private var shape = "rounded"
-    @AppStorage(K.fontSize) private var fontSize = 15.0
-    @AppStorage(K.dotSize) private var dotSize = 12.0
-    @AppStorage(K.opacity) private var opacity = 0.9
-    @AppStorage(K.glass) private var glass = false
-    @AppStorage(K.border) private var border = "none"
-    @AppStorage(K.borderWidth) private var borderWidth = 2.0
-    @AppStorage(K.borderColor) private var borderColor = "#FFFFFF"
+    @AppStorage(K.styleTarget) private var target = "fixed"
     @AppStorage(K.sound) private var sound = false
     @AppStorage(K.soundName) private var soundName = "Tink"
 
-    private let languages = enabledLanguages()
     private let sounds = systemSounds()
 
     var body: some View {
         Form {
-            Section("언어별 표시") {
-                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
-                    GridRow {
-                        Text("언어")
-                        Text("표시 글자")
-                        Text("배경").gridColumnAlignment(.center)
-                        Text("글자").gridColumnAlignment(.center)
-                        Text("숨기기").gridColumnAlignment(.center)
-                        Text("미리보기").frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    Divider()
-                    ForEach(languages, id: \.self) { lang in
-                        LanguageRow(lang: lang, style: BadgeView(
-                            label: "", bg: .clear, fg: .clear, shape: shape, fontSize: min(fontSize, 20),
-                            dotSize: min(dotSize, 20), opacity: opacity, glass: glass, border: border,
-                            borderWidth: borderWidth, borderColor: Color(hex: borderColor)))
-                    }
-                }
-            }
-            Section("뱃지 스타일") {
-                Picker("모양", selection: $shape) {
-                    Text("둥근 사각형").tag("rounded")
-                    Text("캡슐").tag("capsule")
-                    Text("원").tag("circle")
-                    Text("점").tag("dot")
-                }
-                .pickerStyle(.segmented)
-                if #available(macOS 26, *) {
-                    Toggle("유리 효과 (Liquid Glass)", isOn: $glass)
-                }
-                if shape == "dot" {
-                    NumberSlider(title: "점 크기", value: $dotSize, range: 4...40)
-                } else {
-                    NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
-                }
-                NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
-                             range: 20...100)
-                if !glass {
-                    Picker("테두리", selection: $border) {
-                        Text("없음").tag("none")
-                        Text("실선").tag("solid")
-                        Text("파선").tag("dashed")
-                        Text("점선").tag("dotted")
-                    }
-                    .pickerStyle(.segmented)
-                    if border != "none" {
-                        NumberSlider(title: "테두리 두께", value: $borderWidth, range: 1...8)
-                        ColorPicker("테두리 색", selection: Binding(get: { Color(hex: borderColor) },
-                                                                 set: { borderColor = $0.hex }),
-                                    supportsOpacity: false)
-                    }
-                }
-            }
+            StyleSections(mode: target, target: $target).id(target)
             Section("소리") {
                 Toggle("입력기가 바뀔 때 소리 내기", isOn: $sound)
                 Picker("소리", selection: $soundName) {
@@ -128,8 +66,103 @@ struct BadgeTab: View {
     }
 }
 
+struct StyleSections: View {
+    let mode: String
+    @Binding var target: String
+    @AppStorage private var shape: String
+    @AppStorage private var fontSize: Double
+    @AppStorage private var dotSize: Double
+    @AppStorage private var opacity: Double
+    @AppStorage private var glass: Bool
+    @AppStorage private var border: String
+    @AppStorage private var borderWidth: Double
+    @AppStorage private var borderColor: String
+
+    private let languages = enabledLanguages()
+
+    init(mode: String, target: Binding<String>) {
+        self.mode = mode
+        _target = target
+        func key(_ name: String) -> String { K.style(mode, name) }
+        _shape = AppStorage(wrappedValue: "rounded", key(K.shape))
+        _fontSize = AppStorage(wrappedValue: 15.0, key(K.fontSize))
+        _dotSize = AppStorage(wrappedValue: 12.0, key(K.dotSize))
+        _opacity = AppStorage(wrappedValue: 0.9, key(K.opacity))
+        _glass = AppStorage(wrappedValue: false, key(K.glass))
+        _border = AppStorage(wrappedValue: "none", key(K.border))
+        _borderWidth = AppStorage(wrappedValue: 2.0, key(K.borderWidth))
+        _borderColor = AppStorage(wrappedValue: "#FFFFFF", key(K.borderColor))
+    }
+
+    var body: some View {
+        Section("언어별 표시") {
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
+                GridRow {
+                    Text("언어")
+                    Text("표시 글자")
+                    Text("배경").gridColumnAlignment(.center)
+                    Text("글자").gridColumnAlignment(.center)
+                    Text("숨기기").gridColumnAlignment(.center)
+                    Text("미리보기").frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                Divider()
+                ForEach(languages, id: \.self) { lang in
+                    LanguageRow(lang: lang, style: BadgeView(
+                        label: "", bg: .clear, fg: .clear, shape: shape, fontSize: min(fontSize, 20),
+                        dotSize: min(dotSize, 20), opacity: opacity, glass: glass, border: border,
+                        borderWidth: borderWidth, borderColor: Color(hex: borderColor)))
+                }
+            }
+        }
+        Section("뱃지 스타일") {
+            Picker("적용할 위치", selection: $target) {
+                Text("고정 위치").tag("fixed")
+                Text("마우스 포인터 옆").tag("pointer")
+                Text("텍스트 커서 옆").tag("caret")
+            }
+            .pickerStyle(.segmented)
+            Picker("모양", selection: $shape) {
+                Text("둥근 사각형").tag("rounded")
+                Text("캡슐").tag("capsule")
+                Text("원").tag("circle")
+                Text("점").tag("dot")
+            }
+            .pickerStyle(.segmented)
+            if #available(macOS 26, *) {
+                Toggle("유리 효과 (Liquid Glass)", isOn: $glass)
+            }
+            if shape == "dot" {
+                NumberSlider(title: "점 크기", value: $dotSize, range: 4...40)
+            } else {
+                NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
+            }
+            NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
+                         range: 20...100)
+            if !glass {
+                Picker("테두리", selection: $border) {
+                    Text("없음").tag("none")
+                    Text("실선").tag("solid")
+                    Text("파선").tag("dashed")
+                    Text("점선").tag("dotted")
+                }
+                .pickerStyle(.segmented)
+                if border != "none" {
+                    NumberSlider(title: "테두리 두께", value: $borderWidth, range: 1...8)
+                    ColorPicker("테두리 색", selection: Binding(get: { Color(hex: borderColor) },
+                                                             set: { borderColor = $0.hex }),
+                                supportsOpacity: false)
+                }
+            }
+        }
+    }
+}
+
 struct PositionTab: View {
-    @AppStorage(K.positionMode) private var positionMode = "fixed"
+    @AppStorage(K.showFixed) private var showFixed = true
+    @AppStorage(K.showPointer) private var showPointer = false
+    @AppStorage(K.showCaret) private var showCaret = false
     @AppStorage(K.displayMode) private var displayMode = "all"
     @AppStorage(K.displays) private var displays = ""
     @AppStorage(K.hAlign) private var hAlign = "right"
@@ -142,18 +175,14 @@ struct PositionTab: View {
 
     var body: some View {
         Form {
-            Section("위치 방식") {
-                Picker("위치 방식", selection: $positionMode) {
-                    Text("고정 위치").tag("fixed")
-                    Text("마우스 포인터 옆").tag("pointer")
-                    Text("텍스트 커서 옆").tag("caret")
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .onChange(of: positionMode) {
-                    if positionMode == "caret" { _ = accessibilityTrusted(prompt: true) }
-                }
-                if positionMode == "caret" {
+            Section("표시 위치") {
+                Toggle("고정 위치", isOn: $showFixed)
+                Toggle("마우스 포인터 옆", isOn: $showPointer)
+                Toggle("텍스트 커서 옆", isOn: $showCaret)
+                    .onChange(of: showCaret) {
+                        if showCaret { _ = accessibilityTrusted(prompt: true) }
+                    }
+                if showCaret {
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
                         if AXIsProcessTrusted() {
                             Label("손쉬운 사용 권한이 허용되어 있습니다.", systemImage: "checkmark.circle")
@@ -168,11 +197,11 @@ struct PositionTab: View {
                             }
                         }
                     }
-                    Text("텍스트 커서를 찾지 못하는 앱에서는 마우스 포인터 옆에 표시합니다.")
+                    Text("텍스트 커서를 찾지 못하는 앱에서는 마우스 포인터 옆에 대신 표시합니다. 마우스 포인터 옆도 켜져 있으면 숨깁니다.")
                         .foregroundStyle(.secondary)
                 }
             }
-            if positionMode == "fixed" {
+            if showFixed {
                 fixedSections
             }
         }
