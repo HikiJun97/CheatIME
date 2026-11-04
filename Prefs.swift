@@ -2,16 +2,46 @@ import SwiftUI
 
 enum K {
     static let visible = "visible"
+    static let positionMode = "positionMode"
     static let displayMode = "displayMode"
     static let displays = "displays"
     static let shape = "shape"
     static let fontSize = "fontSize"
+    static let dotSize = "dotSize"
+    static let border = "border"
+    static let borderWidth = "borderWidth"
+    static let borderColor = "borderColor"
     static let opacity = "opacity"
     static let glass = "glass"
+    static let appFilter = "appFilter"
+    static let filterApps = "filterApps"
+    static let badgeLanguages = "badgeLanguages"
+    static let rules = "rules"
+    static let sound = "sound"
+    static let soundName = "soundName"
     static let hAlign = "hAlign"
     static let vAlign = "vAlign"
     static let marginX = "marginX"
     static let marginY = "marginY"
+    static let settingsTab = "settingsTab"
+    static let showFixed = "showFixed"
+    static let showPointer = "showPointer"
+    static let showCaret = "showCaret"
+    static let caretFallback = "caretFallback"
+    static let flashOnly = "flashOnly"
+    static let flashDuration = "flashDuration"
+    static let styleTarget = "styleTarget"
+    static let modes = ["fixed", "pointer", "caret"]
+    static let styleKeys = [shape, fontSize, dotSize, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
+    static func style(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
+    static func useDefault(_ mode: String) -> String { "\(mode).useDefault" }
+    static func show(_ mode: String) -> String {
+        switch mode {
+        case "fixed": showFixed
+        case "pointer": showPointer
+        default: showCaret
+        }
+    }
     static func label(_ lang: String) -> String { "lang.\(lang).label" }
     static func bg(_ lang: String) -> String { "lang.\(lang).bg" }
     static func fg(_ lang: String) -> String { "lang.\(lang).fg" }
@@ -19,11 +49,23 @@ enum K {
 }
 
 func registerDefaults() {
-    UserDefaults.standard.register(defaults: [
-        K.visible: true, K.displayMode: "all", K.displays: "", K.shape: "rounded",
-        K.fontSize: 15.0, K.opacity: 0.9, K.glass: false,
-        K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
-    ])
+    let d = UserDefaults.standard
+    let mode = d.string(forKey: K.positionMode) ?? "fixed"
+    var defaults: [String: Any] = [
+        K.visible: true, K.displayMode: "all", K.displays: "", K.sound: false, K.rules: "[]", K.appFilter: false,
+        K.filterApps: "", K.soundName: "Tink", K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
+        K.settingsTab: "badge", K.styleTarget: "default",
+        K.showFixed: mode == "fixed", K.showPointer: mode == "pointer", K.showCaret: mode == "caret", K.caretFallback: true,
+    ]
+    let style: [String: Any] = [
+        K.shape: "rounded", K.fontSize: 15.0, K.dotSize: 12.0, K.opacity: 0.9, K.glass: false,
+        K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF", K.flashOnly: false, K.flashDuration: 1200.0,
+    ]
+    for scope in ["default"] + K.modes {
+        for (key, value) in style { defaults[K.style(scope, key)] = d.object(forKey: key) ?? value }
+    }
+    for m in K.modes { defaults[K.useDefault(m)] = true }
+    d.register(defaults: defaults)
 }
 
 func langDefaults(_ lang: String) -> (label: String, bg: String, fg: String) {
@@ -46,5 +88,22 @@ extension Color {
         guard let c = NSColor(self).usingColorSpace(.sRGB) else { return "#000000" }
         return String(format: "#%02X%02X%02X", Int(round(c.redComponent * 255)),
                       Int(round(c.greenComponent * 255)), Int(round(c.blueComponent * 255)))
+    }
+}
+
+func systemSounds() -> [String] {
+    let files = (try? FileManager.default.contentsOfDirectory(atPath: "/System/Library/Sounds")) ?? []
+    return files.map { ($0 as NSString).deletingPathExtension }.sorted()
+}
+
+func styleScope(_ mode: String) -> String {
+    UserDefaults.standard.bool(forKey: K.useDefault(mode)) ? "default" : mode
+}
+
+func copyDefaultStyle(to mode: String) {
+    let d = UserDefaults.standard
+    let saved = d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName) ?? [:]
+    for key in K.styleKeys where saved[K.style(mode, key)] == nil {
+        d.set(d.object(forKey: K.style("default", key)), forKey: K.style(mode, key))
     }
 }

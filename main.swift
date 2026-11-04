@@ -4,12 +4,15 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let overlay = Overlay()
+    let switcher = Switcher()
     let menu = NSMenu()
     var statusItem: NSStatusItem!
     var showItem: NSMenuItem!
     var settingsWindow: NSWindow?
+    var lastLanguage: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        _ = InputSources.shared
         menu.addItem(withTitle: NSLocalizedString("설정…", comment: ""),
                      action: #selector(openSettings), keyEquivalent: ",").target = self
         showItem = menu.addItem(withTitle: NSLocalizedString("뱃지 표시", comment: ""),
@@ -36,17 +39,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil, queue: .main, using: onChange)
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: onChange)
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let app = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier ?? ""
+            MainActor.assumeIsolated {
+                self?.switcher.appActivated(app)
+                self?.refresh()
+            }
+        }
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: onChange)
-        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [overlay] _ in
-            MainActor.assumeIsolated { overlay.followMouse() }
+        let moves: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
+        NSEvent.addGlobalMonitorForEvents(matching: moves) { [overlay] _ in
+            MainActor.assumeIsolated { overlay.mouseMoved() }
+        }
+        NSEvent.addLocalMonitorForEvents(matching: moves) { [overlay] event in
+            MainActor.assumeIsolated { overlay.mouseMoved() }
+            return event
+        }
+        Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [overlay] _ in
+            MainActor.assumeIsolated { overlay.caretTick() }
         }
 
         refresh()
     }
 
     func refresh() {
-        overlay.update()
+        let lang = currentLanguage()
+        let d = UserDefaults.standard
+        let changed = lastLanguage != nil && lastLanguage != lang
+        if changed, d.bool(forKey: K.sound) {
+            NSSound(named: d.string(forKey: K.soundName) ?? "Tink")?.play()
+        }
+        lastLanguage = lang
+        if changed { overlay.flash() } else { overlay.update() }
         showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
     }
 
@@ -63,10 +90,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openSettings() {
         if settingsWindow == nil {
             let controller = NSHostingController(rootView: SettingsView())
-            let window = NSWindow(contentViewController: controller)
-            window.setContentSize(controller.view.fittingSize)
+            controller.sceneBridgingOptions = [.toolbars, .title]
+            let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .miniaturizable],
+                                  backing: .buffered, defer: false)
+            window.contentViewController = controller
+            window.toolbarStyle = .unified
             window.center()
-            window.title = NSLocalizedString("CheatIME 설정", comment: "")
             window.isReleasedWhenClosed = false
             settingsWindow = window
         }

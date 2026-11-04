@@ -6,53 +6,84 @@ struct BadgeView: View {
     var fg: Color
     var shape: String
     var fontSize: Double
+    var dotSize: Double
     var opacity: Double
     var glass: Bool
+    var border = "none"
+    var borderWidth = 0.0
+    var borderColor = Color.clear
+    var inset: Double = 0
 
     var body: some View {
-        let h = fontSize * 1.8
-        let outline = switch shape {
-        case "circle": AnyShape(Circle())
-        case "capsule": AnyShape(Capsule())
-        default: AnyShape(RoundedRectangle(cornerRadius: fontSize * 0.4))
-        }
+        let isDot = shape == "dot"
+        let h = isDot ? dotSize : fontSize * 1.8
         let padding = switch shape {
-        case "circle": 0.0
+        case "circle", "dot": 0.0
         case "capsule": fontSize * 0.7
         default: fontSize * 0.5
         }
-        let text = Text(label)
+        let dash: [CGFloat] = switch border {
+        case "dashed": [borderWidth * 3, borderWidth * 2]
+        case "dotted": [0, borderWidth * 2]
+        default: []
+        }
+        let text = Text(isDot ? "" : label)
             .font(.system(size: fontSize, weight: .bold))
             .foregroundStyle(fg)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
             .padding(.horizontal, padding)
-            .frame(width: shape == "circle" ? h : nil)
+            .frame(width: shape == "circle" || isDot ? h : nil)
             .frame(minWidth: h)
             .frame(height: h)
         Group {
             if glass, #available(macOS 26, *) {
-                text.glassEffect(.regular.tint(bg), in: outline)
+                text.glassEffect(.regular.tint(bg), in: outline())
             } else {
-                text.background(bg, in: outline)
+                text.background(bg, in: outline())
+                    .overlay {
+                        if border != "none" {
+                            outline(inset: borderWidth / 2)
+                                .stroke(borderColor, style: StrokeStyle(lineWidth: borderWidth, lineCap: .round,
+                                                                        lineJoin: .round, dash: dash))
+                                .padding(borderWidth / 2)
+                        }
+                    }
             }
         }
         .opacity(opacity)
+        .padding(inset)
         .fixedSize()
+    }
+
+    private func outline(inset: Double = 0) -> AnyShape {
+        switch shape {
+        case "circle", "dot": AnyShape(Circle())
+        case "capsule": AnyShape(Capsule(style: .circular))
+        default: AnyShape(RoundedRectangle(cornerRadius: max(0, fontSize * 0.4 - inset)))
+        }
     }
 }
 
 extension BadgeView {
-    init(lang: String) {
+    init(lang: String, scope: String) {
         let d = UserDefaults.standard
         let l = langDefaults(lang)
+        func key(_ name: String) -> String { K.style(scope, name) }
+        let fontSize = d.double(forKey: key(K.fontSize))
+        let glass = d.bool(forKey: key(K.glass))
         self.init(label: d.string(forKey: K.label(lang)) ?? l.label,
                   bg: Color(hex: d.string(forKey: K.bg(lang)) ?? l.bg),
                   fg: Color(hex: d.string(forKey: K.fg(lang)) ?? l.fg),
-                  shape: d.string(forKey: K.shape) ?? "",
-                  fontSize: d.double(forKey: K.fontSize),
-                  opacity: d.double(forKey: K.opacity),
-                  glass: d.bool(forKey: K.glass))
+                  shape: d.string(forKey: key(K.shape)) ?? "",
+                  fontSize: fontSize,
+                  dotSize: d.double(forKey: key(K.dotSize)),
+                  opacity: d.double(forKey: key(K.opacity)),
+                  glass: glass,
+                  border: d.string(forKey: key(K.border)) ?? "none",
+                  borderWidth: d.double(forKey: key(K.borderWidth)),
+                  borderColor: Color(hex: d.string(forKey: key(K.borderColor)) ?? "#FFFFFF"),
+                  inset: glass ? max(8, fontSize * 0.5) : 0)
     }
 }
 
@@ -92,29 +123,137 @@ final class BadgeHost: NSHostingView<BadgeView> {
 
 final class Overlay {
     var contextMenu: NSMenu?
-    private var panels: [NSPanel] = []
+    private var fixedPanels: [NSPanel] = []
+    private lazy var pointerPanel = makePanel(follow: true)
+    private lazy var caretPanel = makePanel(follow: true)
+    private var pointerSize: NSSize?
+    private var caretSize: NSSize?
+    private var caretFallback = true
+    private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
+    private var flashing: Set<String> = []
+    private var flashIDs: [String: Int] = [:]
 
     func update() {
         let d = UserDefaults.standard
         let lang = currentLanguage()
-        let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang))
-        let screens = visible ? targetScreens() : []
-        let badge = BadgeView(lang: lang)
+        let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
+            || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
+        let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
+        func shows(_ mode: String) -> Bool {
+            visible && d.bool(forKey: K.show(mode))
+                && (flashing.contains(mode) || !d.bool(forKey: K.style(styleScope(mode), K.flashOnly)))
+        }
 
-        while panels.count < screens.count { panels.append(makePanel()) }
-        for (i, panel) in panels.enumerated() {
+        let showFixed = shows("fixed")
+        fixedFollowsMouse = showFixed && d.string(forKey: K.displayMode) == "mouse"
+        let screens = showFixed ? targetScreens() : []
+        let fixed = BadgeView(lang: lang, scope: styleScope("fixed"))
+        while fixedPanels.count < screens.count { fixedPanels.append(makePanel(follow: false)) }
+        for (i, panel) in fixedPanels.enumerated() {
             guard i < screens.count else { panel.orderOut(nil); continue }
-            let host = panel.contentView as! BadgeHost
-            host.rootView = badge
-            panel.setFrame(frame(for: host.fittingSize, on: screens[i]), display: true)
+            let size = place(fixed, in: panel)
+            put(panel, at: frame(for: size, on: screens[i]).origin, size: size)
             panel.orderFrontRegardless()
+        }
+
+        pointerSize = shows("pointer") ? place(BadgeView(lang: lang, scope: styleScope("pointer")), in: pointerPanel) : nil
+        if let size = pointerSize {
+            put(pointerPanel, at: pointerOrigin(for: size), size: size)
+            pointerPanel.orderFrontRegardless()
+        } else {
+            pointerPanel.orderOut(nil)
+        }
+
+        caretFallback = d.bool(forKey: K.caretFallback)
+        caretSize = shows("caret") ? place(BadgeView(lang: lang, scope: styleScope("caret")), in: caretPanel) : nil
+        if caretSize == nil { caretPanel.orderOut(nil) } else { caretTick() }
+    }
+
+    func flash() {
+        let d = UserDefaults.standard
+        let modes = K.modes.filter { d.bool(forKey: K.style(styleScope($0), K.flashOnly)) }
+        for mode in modes {
+            let id = flashIDs[mode, default: 0] + 1
+            flashIDs[mode] = id
+            flashing.insert(mode)
+            let seconds = d.double(forKey: K.style(styleScope(mode), K.flashDuration)) / 1000
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.fadeOut(mode, id) }
+        }
+        update()
+        modes.flatMap(panels).forEach { $0.alphaValue = 1 }
+    }
+
+    private func fadeOut(_ mode: String, _ id: Int) {
+        guard flashIDs[mode] == id else { return }
+        let shown = panels(mode).filter(\.isVisible)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.25
+            shown.forEach { $0.animator().alphaValue = 0 }
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.flashIDs[mode] == id else { return }
+                self.flashing.remove(mode)
+                self.update()
+                shown.forEach { $0.alphaValue = 1 }
+            }
         }
     }
 
-    func followMouse() {
-        guard UserDefaults.standard.string(forKey: K.displayMode) == "mouse",
-              NSEvent.pressedMouseButtons == 0 else { return }
+    private func panels(_ mode: String) -> [NSPanel] {
+        switch mode {
+        case "fixed": fixedPanels
+        case "pointer": [pointerPanel]
+        default: [caretPanel]
+        }
+    }
+
+    func mouseMoved() {
+        if let size = pointerSize { put(pointerPanel, at: pointerOrigin(for: size), size: size) }
+        if fixedFollowsMouse { followMouse() }
+    }
+
+    func caretTick() {
+        guard let size = caretSize else { return }
+        if let caret = caretRect() {
+            let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
+            put(caretPanel, at: clamped(p, size: size, near: caret.origin), size: size)
+        } else if pointerSize != nil || !caretFallback {
+            caretPanel.orderOut(nil)
+            return
+        } else {
+            put(caretPanel, at: pointerOrigin(for: size), size: size)
+        }
+        if !caretPanel.isVisible { caretPanel.orderFrontRegardless() }
+    }
+
+    private func place(_ badge: BadgeView, in panel: NSPanel) -> NSSize {
+        let host = panel.contentView as! BadgeHost
+        host.rootView = badge
+        let fit = host.fittingSize
+        return NSSize(width: fit.width - 2 * badge.inset, height: fit.height - 2 * badge.inset)
+    }
+
+    private func put(_ panel: NSPanel, at origin: NSPoint, size: NSSize) {
+        let inset = (panel.contentView as! BadgeHost).rootView.inset
+        let rect = NSRect(origin: origin, size: size).insetBy(dx: -inset, dy: -inset)
+        if panel.frame != rect { panel.setFrame(rect, display: true) }
+    }
+
+    private func pointerOrigin(for size: NSSize) -> NSPoint {
+        let mouse = NSEvent.mouseLocation
+        return clamped(NSPoint(x: mouse.x + 16, y: mouse.y - 16 - size.height), size: size, near: mouse)
+    }
+
+    private func clamped(_ p: NSPoint, size: NSSize, near anchor: NSPoint) -> NSPoint {
+        let screen = NSScreen.screens.first { NSMouseInRect(anchor, $0.frame, false) } ?? NSScreen.screens[0]
+        let v = screen.visibleFrame
+        return NSPoint(x: min(max(p.x, v.minX), v.maxX - size.width), y: min(max(p.y, v.minY), v.maxY - size.height))
+    }
+
+    private func followMouse() {
+        guard NSEvent.pressedMouseButtons == 0 else { return }
         let screen = screenUnderMouse()
         if screen != lastMouseScreen {
             lastMouseScreen = screen
@@ -159,7 +298,8 @@ final class Overlay {
     }
 
     private func savePosition(of panel: NSPanel) {
-        let f = panel.frame
+        let inset = (panel.contentView as! BadgeHost).rootView.inset
+        let f = panel.frame.insetBy(dx: inset, dy: inset)
         let center = NSPoint(x: f.midX, y: f.midY)
         guard let v = (NSScreen.screens.first { $0.frame.contains(center) } ?? panel.screen)?.visibleFrame
         else { return }
@@ -171,7 +311,7 @@ final class Overlay {
         d.set(max(0, bottom ? f.minY - v.minY : v.maxY - f.maxY), forKey: K.marginY)
     }
 
-    private func makePanel() -> NSPanel {
+    private func makePanel(follow: Bool) -> NSPanel {
         let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
         panel.level = .screenSaver
@@ -180,7 +320,8 @@ final class Overlay {
         panel.backgroundColor = .clear
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
-        let host = BadgeHost(rootView: BadgeView(lang: ""))
+        panel.ignoresMouseEvents = follow
+        let host = BadgeHost(rootView: BadgeView(lang: "", scope: "default"))
         host.menu = contextMenu
         host.onClick = { UserDefaults.standard.set(false, forKey: K.visible) }
         host.onDrop = { [weak self, weak panel] in

@@ -12,18 +12,79 @@ func currentLanguage() -> String {
     return langs.first ?? ""
 }
 
-func enabledLanguages() -> [String] {
+struct InputSourceInfo: Hashable {
+    let id: String
+    let name: String
+    let lang: String
+}
+
+func enabledInputSources() -> [InputSourceInfo] {
     let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as! [TISInputSource]
-    var langs: [String] = []
-    for src in list {
+    return list.compactMap { src in
         let category: String? = property(src, kTISPropertyInputSourceCategory)
         let selectable: Bool = property(src, kTISPropertyInputSourceIsSelectCapable) ?? false
-        let srcLangs: [String] = property(src, kTISPropertyInputSourceLanguages) ?? []
         guard category == kTISCategoryKeyboardInputSource as String, selectable,
-              let lang = srcLangs.first, !langs.contains(lang) else { continue }
-        langs.append(lang)
+              let id: String = property(src, kTISPropertyInputSourceID) else { return nil }
+        let langs: [String] = property(src, kTISPropertyInputSourceLanguages) ?? []
+        return InputSourceInfo(id: id, name: property(src, kTISPropertyLocalizedName) ?? id, lang: langs.first ?? "")
     }
-    return langs
+}
+
+func badgeLanguages() -> [String] {
+    (UserDefaults.standard.string(forKey: K.badgeLanguages) ?? "").split(separator: ",").map(String.init)
+}
+
+final class InputSources: ObservableObject {
+    static let shared = InputSources()
+    @Published private(set) var sources = enabledInputSources()
+
+    private init() {
+        if UserDefaults.standard.string(forKey: K.badgeLanguages) == nil {
+            addLanguages(languages)
+        }
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name(kTISNotifyEnabledKeyboardInputSourcesChanged as String),
+            object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                let shared = InputSources.shared
+                let old = shared.languages
+                shared.sources = enabledInputSources()
+                shared.addLanguages(shared.languages.filter { !old.contains($0) })
+            }
+        }
+    }
+
+    private var languages: [String] {
+        var langs: [String] = []
+        for source in sources where !source.lang.isEmpty && !langs.contains(source.lang) {
+            langs.append(source.lang)
+        }
+        return langs
+    }
+
+    func reload() {
+        sources = enabledInputSources()
+        addLanguages(languages)
+    }
+
+    private func addLanguages(_ langs: [String]) {
+        let list = badgeLanguages()
+        let missing = langs.filter { !list.contains($0) }
+        guard !missing.isEmpty else { return }
+        UserDefaults.standard.set((list + missing).joined(separator: ","), forKey: K.badgeLanguages)
+    }
+}
+
+func currentInputSourceID() -> String {
+    property(TISCopyCurrentKeyboardInputSource().takeRetainedValue(), kTISPropertyInputSourceID) ?? ""
+}
+
+func selectInputSource(_ id: String) {
+    guard id != currentInputSourceID() else { return }
+    let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
+    let list = TISCreateInputSourceList(filter, false).takeRetainedValue() as! [TISInputSource]
+    if let src = list.first { TISSelectInputSource(src) }
 }
 
 extension NSScreen {

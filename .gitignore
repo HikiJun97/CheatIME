@@ -1,4 +1,4 @@
 CheatIME.app/
 build/
-CheatIME-*.zip
+dist/
 .DS_Store
