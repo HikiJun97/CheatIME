@@ -47,24 +47,87 @@ struct BadgeTab: View {
     @AppStorage(K.styleTarget) private var target = "default"
 
     var body: some View {
-        Form {
-            Section {
-                Picker("편집할 대상", selection: $target) {
-                    Text("기본값").tag("default")
-                    Text("고정 위치").tag("fixed")
-                    Text("마우스 포인터 옆").tag("pointer")
-                    Text("텍스트 커서 옆").tag("caret")
+        SubTabs(selection: $target, tabs: [
+            ("default", "기본값"), ("fixed", "고정 위치"), ("pointer", "마우스 포인터 옆"), ("caret", "텍스트 커서 옆"),
+        ]) { id in
+            Form {
+                if K.modes.contains(id) {
+                    PositionSections(mode: id)
+                } else {
+                    DefaultSections()
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
             }
-            if K.modes.contains(target) {
-                PositionSections(mode: target).id(target)
-            } else {
-                DefaultSections()
-            }
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
         }
-        .formStyle(.grouped)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 20)
+    }
+}
+
+final class PaneTabView: NSTabView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let size = self.frame.size
+            self.setFrameSize(NSSize(width: size.width + 1, height: size.height))
+            self.setFrameSize(size)
+        }
+    }
+}
+
+struct SubTabs<Content: View>: NSViewRepresentable {
+    @Binding var selection: String
+    let tabs: [(id: String, title: String)]
+    let content: (String) -> Content
+
+    func makeNSView(context: Context) -> PaneTabView {
+        let view = PaneTabView()
+        view.delegate = context.coordinator
+        for tab in tabs {
+            let item = NSTabViewItem(identifier: tab.id)
+            item.label = NSLocalizedString(tab.title, comment: "")
+            item.view = NSView()
+            view.addTabViewItem(item)
+        }
+        updateNSView(view, context: context)
+        return view
+    }
+
+    func updateNSView(_ view: PaneTabView, context: Context) {
+        context.coordinator.parent = self
+        let index = tabs.firstIndex { $0.id == selection } ?? 0
+        load(view.tabViewItem(at: index))
+        if view.selectedTabViewItem.map(view.indexOfTabViewItem) != index {
+            view.selectTabViewItem(at: index)
+        }
+    }
+
+    func load(_ item: NSTabViewItem) {
+        guard let container = item.view, container.subviews.isEmpty, let id = item.identifier as? String else { return }
+        let host = NSHostingView(rootView: content(id))
+        host.frame = container.bounds
+        host.autoresizingMask = [.width, .height]
+        container.addSubview(host)
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    final class Coordinator: NSObject, NSTabViewDelegate {
+        var parent: SubTabs
+
+        init(parent: SubTabs) { self.parent = parent }
+
+        func tabView(_ tabView: NSTabView, willSelect item: NSTabViewItem?) {
+            if let item { parent.load(item) }
+        }
+
+        func tabView(_ tabView: NSTabView, didSelect item: NSTabViewItem?) {
+            if let id = item?.identifier as? String, parent.selection != id { parent.selection = id }
+        }
     }
 }
 

@@ -25,8 +25,8 @@
 **显示位置**
 - 以下三种位置可以任意组合同时开启，例如在屏幕角落固定一个徽标，同时在文本光标旁再显示一个。样式和显示时机默认沿用 Defaults（默认值）；关闭某个位置的 Use defaults 后，可以为它单独设置形状、大小、不透明度、边框、Liquid Glass 效果和显示时机。
 - Fixed（固定位置）：用 3×3 对齐网格和边距定位，可显示在所有显示器、鼠标指针所在的显示器或你选定的显示器上。也可以直接拖动徽标。
-- Next to pointer（鼠标指针旁）：徽标跟随鼠标指针移动。
-- Next to text cursor（文本光标旁）：徽标显示在文本光标旁边。需要辅助功能权限（macOS 27 中称为“设备控制和数据访问”）。在无法获取文本光标的应用（例如部分终端）中，可以改为显示在鼠标指针旁（此选项可以关闭）；如果同时开启了 Next to pointer，则不再重复显示。
+- Next to Pointer（鼠标指针旁）：徽标跟随鼠标指针移动。
+- Next to Text Cursor（文本光标旁）：徽标显示在文本光标旁边。需要辅助功能权限（macOS 27 中称为“设备控制和数据访问”）。在无法获取文本光标的应用（例如部分终端）中，可以改为显示在鼠标指针旁（此选项可以关闭）；如果同时开启了 Next to Pointer，则不再重复显示。
 
 **应用**
 - 仅在勾选的应用位于前台时显示徽标。已勾选的应用排在列表最前面。
@@ -35,7 +35,7 @@
 **其他**
 - 点按徽标即可隐藏，右键点按（或按住 Control 键点按）打开菜单
 - Open at login（登录时自动打开）
-- 设置窗口和菜单提供英文、韩文和日文界面（暂无中文界面）。这只是应用自身的界面语言，徽标适用于所有语言的输入法
+- 设置窗口和菜单提供英文、韩文和日文界面（暂无中文界面），默认跟随系统语言，也可以在 Settings → General 中更改。这只是应用自身的界面语言，徽标适用于所有语言的输入法
 - 不联网，也不读取键盘输入
 
 <p align="center"><img src="docs/settings-en.png" width="560" alt="徽标设置"></p>
@@ -66,7 +66,7 @@ macOS 15 Sequoia 及以上，支持搭载 Apple 芯片或 Intel 芯片的 Mac（
 
 ### 辅助功能权限
 
-只有使用 **Next to text cursor**（文本光标旁）时才需要。在 Settings → Badge → Next to text cursor 中开启显示后，前往**系统设置 → 隐私与安全性 → 辅助功能**（macOS 27 中为**设备控制和数据访问**）允许 CheatIME。
+只有使用 **Next to Text Cursor**（文本光标旁）时才需要。在 Settings → Badge → Next to Text Cursor 中开启显示后，前往**系统设置 → 隐私与安全性 → 辅助功能**（macOS 27 中为**设备控制和数据访问**）允许 CheatIME。
 
 由于 CheatIME 没有使用 Apple Developer ID 签名，macOS 会把每个新版本视为不同的应用。更新后，请先从该列表中移除 CheatIME，再重新允许。
 
@@ -94,7 +94,7 @@ defaults delete io.github.hikijun97.cheatime
 
 ## 隐私
 
-CheatIME 通过 Text Input Sources API 向 macOS 查询当前使用的输入法，并在符合规则时切换输入法。它不监听键盘输入，也不建立任何网络连接。使用 **Next to text cursor** 时，辅助功能权限仅用于读取文本光标的位置。设置保存在 macOS 标准的用户默认设置（user defaults）中。
+CheatIME 通过 Text Input Sources API 向 macOS 查询当前使用的输入法，并在符合规则时切换输入法。它不监听键盘输入，也不建立任何网络连接。使用 **Next to Text Cursor** 时，辅助功能权限仅用于读取文本光标的位置。设置保存在 macOS 标准的用户默认设置（user defaults）中。
 
 ## 许可证
 

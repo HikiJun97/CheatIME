@@ -25,8 +25,8 @@ If you type in more than one language and spend your day in a terminal, Vim, or 
 **Badge positions**
 - Turn on any combination of the three positions below, for example a fixed badge in the corner plus one next to the text cursor. Style and timing come from shared defaults; turn off Use defaults for a position to give it its own shape, size, opacity, border, Liquid Glass, and timing.
 - Fixed: a 3×3 alignment grid with margins, on all displays, the display with the pointer, or the displays you choose. You can also just drag the badge.
-- Next to pointer: the badge follows the mouse pointer.
-- Next to text cursor: the badge sits beside the text cursor. This requires Accessibility access (called Device Control and Data Access in macOS 27). In apps that don't report a text cursor (some terminals, for example), it can fall back to the pointer (an option you can turn off); it stays hidden if Next to pointer is also on.
+- Next to Pointer: the badge follows the mouse pointer.
+- Next to Text Cursor: the badge sits beside the text cursor. This requires Accessibility access (called Device Control and Data Access in macOS 27). In apps that don't report a text cursor (some terminals, for example), it can fall back to the pointer (an option you can turn off); it stays hidden if Next to Pointer is also on.
 
 **Apps**
 - Show the badge only when one of the apps you check is in front. Checked apps are listed first.
@@ -35,7 +35,7 @@ If you type in more than one language and spend your day in a terminal, Vim, or 
 **Everything else**
 - Click the badge to hide it; right-click (or Control-click) to open the menu
 - Open at login
-- Settings and menus are available in English, Korean, and Japanese. This applies only to the app's own interface; the badge works with input sources in any language.
+- Settings and menus are available in English, Korean, and Japanese. The app follows your system language, and you can pick another in Settings → General. This applies only to the app's own interface; the badge works with input sources in any language.
 - No network access, and it never reads your keystrokes
 
 <p align="center"><img src="docs/settings-en.png" width="560" alt="Badge settings"></p>
@@ -66,7 +66,7 @@ To start CheatIME automatically, turn on **Open at login** in Settings → Gener
 
 ### Accessibility access
 
-Only the **Next to text cursor** position needs it. Turn it on in Settings → Badge → Next to text cursor, then allow CheatIME in **System Settings → Privacy & Security → Accessibility** (**Device Control and Data Access** in macOS 27).
+Only the **Next to Text Cursor** position needs it. Turn it on in Settings → Badge → Next to Text Cursor, then allow CheatIME in **System Settings → Privacy & Security → Accessibility** (**Device Control and Data Access** in macOS 27).
 
 Because CheatIME is not signed with an Apple Developer ID, macOS treats every new version as a different app. After you update, remove CheatIME from that list and allow it again.
 
@@ -94,7 +94,7 @@ If you turned on **Open at login** or granted Accessibility access, remove Cheat
 
 ## Privacy
 
-CheatIME uses the Text Input Sources API to check which input source is active and to switch it when one of your rules applies. It does not monitor keystrokes and makes no network connections. With **Next to text cursor**, it uses Accessibility access only to read where the text cursor is. Settings are stored in standard user defaults.
+CheatIME uses the Text Input Sources API to check which input source is active and to switch it when one of your rules applies. It does not monitor keystrokes and makes no network connections. With **Next to Text Cursor**, it uses Accessibility access only to read where the text cursor is. Settings are stored in standard user defaults.
 
 ## License
 
