@@ -128,6 +128,7 @@ final class Overlay {
     private lazy var caretPanel = makePanel(follow: true)
     private var pointerSize: NSSize?
     private var caretSize: NSSize?
+    private var caretFallback = true
     private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
 
@@ -159,6 +160,7 @@ final class Overlay {
             pointerPanel.orderOut(nil)
         }
 
+        caretFallback = d.bool(forKey: K.caretFallback)
         caretSize = visible && d.bool(forKey: K.showCaret) ? place(BadgeView(lang: lang, mode: "caret"), in: caretPanel) : nil
         if caretSize == nil { caretPanel.orderOut(nil) } else { caretTick() }
     }
@@ -173,7 +175,7 @@ final class Overlay {
         if let caret = caretRect() {
             let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
             put(caretPanel, at: clamped(p, size: size, near: caret.origin), size: size)
-        } else if pointerSize != nil {
+        } else if pointerSize != nil || !caretFallback {
             caretPanel.orderOut(nil)
             return
         } else {

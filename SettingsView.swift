@@ -163,6 +163,7 @@ struct PositionTab: View {
     @AppStorage(K.showFixed) private var showFixed = true
     @AppStorage(K.showPointer) private var showPointer = false
     @AppStorage(K.showCaret) private var showCaret = false
+    @AppStorage(K.caretFallback) private var caretFallback = true
     @AppStorage(K.displayMode) private var displayMode = "all"
     @AppStorage(K.displays) private var displays = ""
     @AppStorage(K.hAlign) private var hAlign = "right"
@@ -197,7 +198,9 @@ struct PositionTab: View {
                             }
                         }
                     }
-                    Text("텍스트 커서를 찾지 못하는 앱에서는 마우스 포인터 옆에 대신 표시합니다. 마우스 포인터 옆도 켜져 있으면 숨깁니다.")
+                    Toggle("텍스트 커서를 찾지 못하면 마우스 포인터 옆에 표시", isOn: $caretFallback)
+                        .disabled(showPointer)
+                    Text("마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다.")
                         .foregroundStyle(.secondary)
                 }
             }
