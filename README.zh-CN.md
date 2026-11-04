@@ -44,8 +44,8 @@ macOS 15 Sequoia 及以上，支持搭载 Apple 芯片或 Intel 芯片的 Mac（
 
 ## 安装
 
-1. 从 [Releases](https://github.com/HikiJun97/CheatIME/releases) 下载 `CheatIME-<版本>.zip`。
-2. 解压后将 `CheatIME.app` 移到 `/Applications`。
+1. 从 [Releases](https://github.com/HikiJun97/CheatIME/releases) 下载 `CheatIME-<版本>.dmg`。
+2. 打开 DMG，将 **CheatIME** 拖到 **Applications**。
 3. CheatIME 未经过 Apple 公证，首次打开时会被 macOS 拦截。请用以下任一方式放行：
    - 先打开一次 CheatIME，被拦截后前往**系统设置 → 隐私与安全性**，在 CheatIME 的提示旁点按**仍要打开**并确认。
    - 或在终端中运行：
@@ -76,7 +76,7 @@ git clone https://github.com/HikiJun97/CheatIME.git
 cd CheatIME
 make            # 构建 CheatIME.app（通用二进制）
 make install    # 复制到 /Applications 并启动
-make dist       # 生成 CheatIME-<版本>.zip
+make dist       # 在 dist/ 中生成 DMG 和 ZIP
 ```
 
 ## 卸载
