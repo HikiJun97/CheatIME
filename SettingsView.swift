@@ -4,13 +4,13 @@ struct SettingsView: View {
     @AppStorage(K.settingsTab) private var tab = "badge"
 
     private let panes: [(id: String, title: LocalizedStringKey)] = [
-        ("badge", "뱃지"), ("position", "위치"), ("apps", "앱"), ("rules", "자동 전환"), ("general", "일반"),
+        ("badge", "뱃지"), ("apps", "앱"), ("rules", "자동 전환"), ("general", "일반"),
     ]
 
     var body: some View {
+        let current = panes.contains { $0.id == tab } ? tab : "badge"
         Group {
-            switch tab {
-            case "position": PositionTab()
+            switch current {
             case "apps": AppsTab()
             case "rules": RulesTab()
             case "general": GeneralTab()
@@ -18,11 +18,11 @@ struct SettingsView: View {
             }
         }
         .frame(width: 620, height: 620)
-        .navigationTitle(Text(panes.first { $0.id == tab }?.title ?? "뱃지"))
+        .navigationTitle(Text(panes.first { $0.id == current }?.title ?? "뱃지"))
         .toolbar(removing: .title)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Picker("설정", selection: $tab) {
+                Picker("설정", selection: Binding(get: { current }, set: { tab = $0 })) {
                     ForEach(panes, id: \.id) { Text($0.title).tag($0.id) }
                 }
                 .paneSwitcherStyle()
@@ -44,31 +44,89 @@ extension View {
 }
 
 struct BadgeTab: View {
-    @AppStorage(K.styleTarget) private var target = "fixed"
-    @AppStorage(K.sound) private var sound = false
-    @AppStorage(K.soundName) private var soundName = "Tink"
-
-    private let sounds = systemSounds()
+    @AppStorage(K.styleTarget) private var target = "default"
 
     var body: some View {
         Form {
-            StyleSections(mode: target, target: $target).id(target)
-            Section("소리") {
-                Toggle("입력기가 바뀔 때 소리 내기", isOn: $sound)
-                Picker("소리", selection: $soundName) {
-                    ForEach(sounds, id: \.self) { Text($0).tag($0) }
+            Section {
+                Picker("편집할 대상", selection: $target) {
+                    Text("기본값").tag("default")
+                    Text("고정 위치").tag("fixed")
+                    Text("마우스 포인터 옆").tag("pointer")
+                    Text("텍스트 커서 옆").tag("caret")
                 }
-                .disabled(!sound)
-                .onChange(of: soundName) { NSSound(named: soundName)?.play() }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+            if K.modes.contains(target) {
+                PositionSections(mode: target).id(target)
+            } else {
+                DefaultSections()
             }
         }
         .formStyle(.grouped)
     }
 }
 
-struct StyleSections: View {
+struct DefaultSections: View {
+    @AppStorage(K.sound) private var sound = false
+    @AppStorage(K.soundName) private var soundName = "Tink"
+
+    private let sounds = systemSounds()
+
+    var body: some View {
+        StyleSections(scope: "default")
+        TimingSection(scope: "default")
+        Section("소리") {
+            Toggle("입력기가 바뀔 때 소리 내기", isOn: $sound)
+            Picker("소리", selection: $soundName) {
+                ForEach(sounds, id: \.self) { Text($0).tag($0) }
+            }
+            .disabled(!sound)
+            .onChange(of: soundName) { NSSound(named: soundName)?.play() }
+        }
+    }
+}
+
+struct PositionSections: View {
     let mode: String
-    @Binding var target: String
+    @AppStorage private var show: Bool
+    @AppStorage private var useDefault: Bool
+
+    init(mode: String) {
+        self.mode = mode
+        _show = AppStorage(wrappedValue: mode == "fixed", K.show(mode))
+        _useDefault = AppStorage(wrappedValue: true, K.useDefault(mode))
+    }
+
+    var body: some View {
+        Section {
+            Toggle("표시", isOn: $show)
+                .onChange(of: show) {
+                    if mode == "caret" && show { _ = accessibilityTrusted(prompt: true) }
+                }
+            Toggle("기본값 따르기", isOn: $useDefault)
+                .onChange(of: useDefault) {
+                    if !useDefault { copyDefaultStyle(to: mode) }
+                }
+            Text("끄면 이 위치의 스타일과 표시 시점을 따로 정합니다.")
+                .foregroundStyle(.secondary)
+        }
+        if mode == "caret" {
+            CaretSection()
+        }
+        if !useDefault {
+            StyleSections(scope: mode)
+            TimingSection(scope: mode)
+        }
+        if mode == "fixed" {
+            FixedSections()
+        }
+    }
+}
+
+struct StyleSections: View {
+    let scope: String
     @AppStorage private var shape: String
     @AppStorage private var fontSize: Double
     @AppStorage private var dotSize: Double
@@ -80,10 +138,9 @@ struct StyleSections: View {
 
     private let languages = enabledLanguages()
 
-    init(mode: String, target: Binding<String>) {
-        self.mode = mode
-        _target = target
-        func key(_ name: String) -> String { K.style(mode, name) }
+    init(scope: String) {
+        self.scope = scope
+        func key(_ name: String) -> String { K.style(scope, name) }
         _shape = AppStorage(wrappedValue: "rounded", key(K.shape))
         _fontSize = AppStorage(wrappedValue: 15.0, key(K.fontSize))
         _dotSize = AppStorage(wrappedValue: 12.0, key(K.dotSize))
@@ -95,34 +152,34 @@ struct StyleSections: View {
     }
 
     var body: some View {
-        Section("언어별 표시") {
-            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
-                GridRow {
-                    Text("언어")
-                    Text("표시 글자")
-                    Text("배경").gridColumnAlignment(.center)
-                    Text("글자").gridColumnAlignment(.center)
-                    Text("숨기기").gridColumnAlignment(.center)
-                    Text("미리보기").frame(maxWidth: .infinity, alignment: .trailing)
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                Divider()
-                ForEach(languages, id: \.self) { lang in
-                    LanguageRow(lang: lang, style: BadgeView(
-                        label: "", bg: .clear, fg: .clear, shape: shape, fontSize: min(fontSize, 20),
-                        dotSize: min(dotSize, 20), opacity: opacity, glass: glass, border: border,
-                        borderWidth: borderWidth, borderColor: Color(hex: borderColor)))
+        if scope == "default" {
+            Section("언어별 표시") {
+                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
+                    GridRow {
+                        Text("언어")
+                        Text("표시 글자")
+                        Text("배경").gridColumnAlignment(.center)
+                        Text("글자").gridColumnAlignment(.center)
+                        Text("숨기기").gridColumnAlignment(.center)
+                        Text("미리보기").frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    Divider()
+                    ForEach(languages, id: \.self) { lang in
+                        LanguageRow(lang: lang, style: preview(""))
+                    }
                 }
             }
         }
         Section("뱃지 스타일") {
-            Picker("적용할 위치", selection: $target) {
-                Text("고정 위치").tag("fixed")
-                Text("마우스 포인터 옆").tag("pointer")
-                Text("텍스트 커서 옆").tag("caret")
+            if scope != "default" {
+                HStack {
+                    Text("미리보기")
+                    Spacer()
+                    ForEach(languages, id: \.self) { preview($0) }
+                }
             }
-            .pickerStyle(.segmented)
             Picker("모양", selection: $shape) {
                 Text("둥근 사각형").tag("rounded")
                 Text("캡슐").tag("capsule")
@@ -157,15 +214,68 @@ struct StyleSections: View {
             }
         }
     }
+
+    private func preview(_ lang: String) -> BadgeView {
+        var badge = BadgeView(lang: lang, scope: scope)
+        badge.shape = shape
+        badge.fontSize = min(fontSize, 20)
+        badge.dotSize = min(dotSize, 20)
+        badge.opacity = opacity
+        badge.glass = glass
+        badge.border = border
+        badge.borderWidth = borderWidth
+        badge.borderColor = Color(hex: borderColor)
+        badge.inset = 0
+        return badge
+    }
 }
 
-struct PositionTab: View {
-    @AppStorage(K.showFixed) private var showFixed = true
-    @AppStorage(K.showPointer) private var showPointer = false
-    @AppStorage(K.showCaret) private var showCaret = false
+struct TimingSection: View {
+    @AppStorage private var flashOnly: Bool
+    @AppStorage private var flashDuration: Double
+
+    init(scope: String) {
+        _flashOnly = AppStorage(wrappedValue: false, K.style(scope, K.flashOnly))
+        _flashDuration = AppStorage(wrappedValue: 1200.0, K.style(scope, K.flashDuration))
+    }
+
+    var body: some View {
+        Section("표시 시점") {
+            Toggle("입력기가 바뀔 때만 잠깐 표시", isOn: $flashOnly)
+            NumberSlider(title: "표시 시간 (ms)", value: $flashDuration, range: 300...5000)
+                .disabled(!flashOnly)
+        }
+    }
+}
+
+struct CaretSection: View {
     @AppStorage(K.caretFallback) private var caretFallback = true
-    @AppStorage(K.flashOnly) private var flashOnly = false
-    @AppStorage(K.flashDuration) private var flashDuration = 1200.0
+    @AppStorage(K.showPointer) private var showPointer = false
+
+    var body: some View {
+        Section("텍스트 커서") {
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                if AXIsProcessTrusted() {
+                    Label("텍스트 커서 위치를 읽을 권한이 허용되어 있습니다.", systemImage: "checkmark.circle")
+                        .foregroundStyle(.green)
+                } else {
+                    HStack {
+                        Label("텍스트 커서 위치를 읽으려면 권한이 필요합니다.", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        Button("권한 설정 열기", action: openAccessibilitySettings)
+                    }
+                }
+            }
+            Toggle("텍스트 커서를 찾지 못하면 마우스 포인터 옆에 표시", isOn: $caretFallback)
+                .disabled(showPointer)
+            Text("마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다.")
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct FixedSections: View {
     @AppStorage(K.displayMode) private var displayMode = "all"
     @AppStorage(K.displays) private var displays = ""
     @AppStorage(K.hAlign) private var hAlign = "right"
@@ -177,49 +287,6 @@ struct PositionTab: View {
     private let maxMargin = (NSScreen.screens.map { max($0.visibleFrame.width, $0.visibleFrame.height) }.max() ?? 800) / 2
 
     var body: some View {
-        Form {
-            Section("표시 위치") {
-                Toggle("고정 위치", isOn: $showFixed)
-                Toggle("마우스 포인터 옆", isOn: $showPointer)
-                Toggle("텍스트 커서 옆", isOn: $showCaret)
-                    .onChange(of: showCaret) {
-                        if showCaret { _ = accessibilityTrusted(prompt: true) }
-                    }
-                if showCaret {
-                    TimelineView(.periodic(from: .now, by: 1)) { _ in
-                        if AXIsProcessTrusted() {
-                            Label("텍스트 커서 위치를 읽을 권한이 허용되어 있습니다.", systemImage: "checkmark.circle")
-                                .foregroundStyle(.green)
-                        } else {
-                            HStack {
-                                Label("텍스트 커서 위치를 읽으려면 권한이 필요합니다.",
-                                      systemImage: "exclamationmark.triangle")
-                                    .foregroundStyle(.orange)
-                                Spacer()
-                                Button("권한 설정 열기", action: openAccessibilitySettings)
-                            }
-                        }
-                    }
-                    Toggle("텍스트 커서를 찾지 못하면 마우스 포인터 옆에 표시", isOn: $caretFallback)
-                        .disabled(showPointer)
-                    Text("마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다.")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Section("표시 시점") {
-                Toggle("입력기가 바뀔 때만 잠깐 표시", isOn: $flashOnly)
-                NumberSlider(title: "표시 시간 (ms)", value: $flashDuration, range: 300...5000)
-                    .disabled(!flashOnly)
-            }
-            if showFixed {
-                fixedSections
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    @ViewBuilder
-    private var fixedSections: some View {
         Section("디스플레이") {
             Picker("표시할 곳", selection: $displayMode) {
                 Text("모든 디스플레이").tag("all")

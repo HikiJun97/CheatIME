@@ -66,10 +66,10 @@ struct BadgeView: View {
 }
 
 extension BadgeView {
-    init(lang: String, mode: String) {
+    init(lang: String, scope: String) {
         let d = UserDefaults.standard
         let l = langDefaults(lang)
-        func key(_ name: String) -> String { K.style(mode, name) }
+        func key(_ name: String) -> String { K.style(scope, name) }
         let fontSize = d.double(forKey: key(K.fontSize))
         let glass = d.bool(forKey: key(K.glass))
         self.init(label: d.string(forKey: K.label(lang)) ?? l.label,
@@ -131,8 +131,8 @@ final class Overlay {
     private var caretFallback = true
     private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
-    private var flashing = false
-    private var flashID = 0
+    private var flashing: Set<String> = []
+    private var flashIDs: [String: Int] = [:]
 
     func update() {
         let d = UserDefaults.standard
@@ -141,12 +141,15 @@ final class Overlay {
         let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
             || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
         let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
-            && (flashing || !d.bool(forKey: K.flashOnly))
+        func shows(_ mode: String) -> Bool {
+            visible && d.bool(forKey: K.show(mode))
+                && (flashing.contains(mode) || !d.bool(forKey: K.style(styleScope(mode), K.flashOnly)))
+        }
 
-        let showFixed = visible && d.bool(forKey: K.showFixed)
+        let showFixed = shows("fixed")
         fixedFollowsMouse = showFixed && d.string(forKey: K.displayMode) == "mouse"
         let screens = showFixed ? targetScreens() : []
-        let fixed = BadgeView(lang: lang, mode: "fixed")
+        let fixed = BadgeView(lang: lang, scope: styleScope("fixed"))
         while fixedPanels.count < screens.count { fixedPanels.append(makePanel(follow: false)) }
         for (i, panel) in fixedPanels.enumerated() {
             guard i < screens.count else { panel.orderOut(nil); continue }
@@ -155,7 +158,7 @@ final class Overlay {
             panel.orderFrontRegardless()
         }
 
-        pointerSize = visible && d.bool(forKey: K.showPointer) ? place(BadgeView(lang: lang, mode: "pointer"), in: pointerPanel) : nil
+        pointerSize = shows("pointer") ? place(BadgeView(lang: lang, scope: styleScope("pointer")), in: pointerPanel) : nil
         if let size = pointerSize {
             put(pointerPanel, at: pointerOrigin(for: size), size: size)
             pointerPanel.orderFrontRegardless()
@@ -164,40 +167,47 @@ final class Overlay {
         }
 
         caretFallback = d.bool(forKey: K.caretFallback)
-        caretSize = visible && d.bool(forKey: K.showCaret) ? place(BadgeView(lang: lang, mode: "caret"), in: caretPanel) : nil
+        caretSize = shows("caret") ? place(BadgeView(lang: lang, scope: styleScope("caret")), in: caretPanel) : nil
         if caretSize == nil { caretPanel.orderOut(nil) } else { caretTick() }
     }
 
     func flash() {
         let d = UserDefaults.standard
-        guard d.bool(forKey: K.flashOnly) else { return update() }
-        flashID += 1
-        let id = flashID
-        flashing = true
-        update()
-        allPanels.forEach { $0.alphaValue = 1 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + d.double(forKey: K.flashDuration) / 1000) { [weak self] in
-            self?.fadeOut(id)
+        let modes = K.modes.filter { d.bool(forKey: K.style(styleScope($0), K.flashOnly)) }
+        for mode in modes {
+            let id = flashIDs[mode, default: 0] + 1
+            flashIDs[mode] = id
+            flashing.insert(mode)
+            let seconds = d.double(forKey: K.style(styleScope(mode), K.flashDuration)) / 1000
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.fadeOut(mode, id) }
         }
+        update()
+        modes.flatMap(panels).forEach { $0.alphaValue = 1 }
     }
 
-    private func fadeOut(_ id: Int) {
-        guard id == flashID else { return }
-        let shown = allPanels.filter(\.isVisible)
+    private func fadeOut(_ mode: String, _ id: Int) {
+        guard flashIDs[mode] == id else { return }
+        let shown = panels(mode).filter(\.isVisible)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.25
             shown.forEach { $0.animator().alphaValue = 0 }
         } completionHandler: { [weak self] in
             MainActor.assumeIsolated {
-                guard let self, id == self.flashID else { return }
-                self.flashing = false
+                guard let self, self.flashIDs[mode] == id else { return }
+                self.flashing.remove(mode)
                 self.update()
                 shown.forEach { $0.alphaValue = 1 }
             }
         }
     }
 
-    private var allPanels: [NSPanel] { fixedPanels + [pointerPanel, caretPanel] }
+    private func panels(_ mode: String) -> [NSPanel] {
+        switch mode {
+        case "fixed": fixedPanels
+        case "pointer": [pointerPanel]
+        default: [caretPanel]
+        }
+    }
 
     func mouseMoved() {
         if let size = pointerSize { put(pointerPanel, at: pointerOrigin(for: size), size: size) }
@@ -311,7 +321,7 @@ final class Overlay {
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.ignoresMouseEvents = follow
-        let host = BadgeHost(rootView: BadgeView(lang: "", mode: "fixed"))
+        let host = BadgeHost(rootView: BadgeView(lang: "", scope: "default"))
         host.menu = contextMenu
         host.onClick = { UserDefaults.standard.set(false, forKey: K.visible) }
         host.onDrop = { [weak self, weak panel] in

@@ -38,7 +38,6 @@
 "점" = "Dot";
 "소리" = "Sound";
 "입력기가 바뀔 때 소리 내기" = "Play a sound when the input source changes";
-"표시 위치" = "Badge positions";
 "고정 위치" = "Fixed";
 "마우스 포인터 옆" = "Next to pointer";
 "텍스트 커서 옆" = "Next to text cursor";
@@ -71,9 +70,14 @@
 "테두리 두께" = "Border width";
 "테두리 색" = "Border color";
 "설정" = "Settings";
-"적용할 위치" = "Apply to";
 "텍스트 커서를 찾지 못하면 마우스 포인터 옆에 표시" = "Show next to the pointer when the text cursor can't be found";
 "마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다." = "Not shown while Next to pointer is on, so the badges don't overlap.";
 "표시 시점" = "When to show";
 "입력기가 바뀔 때만 잠깐 표시" = "Show only briefly when the input source changes";
 "표시 시간 (ms)" = "Duration (ms)";
+"편집할 대상" = "Edit";
+"기본값" = "Defaults";
+"표시" = "Show";
+"기본값 따르기" = "Use defaults";
+"끄면 이 위치의 스타일과 표시 시점을 따로 정합니다." = "Turn this off to give this position its own style and timing.";
+"텍스트 커서" = "Text cursor";
