@@ -200,6 +200,7 @@ struct StyleSections: View {
     @AppStorage private var borderColor: String
 
     @AppStorage(K.badgeLanguages) private var order = ""
+    @StateObject private var drag = LanguageDrag()
     private var languages: [String] { order.split(separator: ",").map(String.init) }
 
     init(scope: String) {
@@ -218,21 +219,17 @@ struct StyleSections: View {
     var body: some View {
         if scope == "default" {
             Section("언어별 표시") {
-                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
-                    GridRow {
-                        Text("언어")
-                        Text("표시 글자")
-                        Text("배경").gridColumnAlignment(.center)
-                        Text("글자").gridColumnAlignment(.center)
-                        Text("숨기기").gridColumnAlignment(.center)
-                        Text("미리보기").frame(maxWidth: .infinity, alignment: .trailing)
-                        Text(verbatim: "")
-                    }
+                VStack(spacing: 0) {
+                    LanguageColumns(
+                        name: Text("언어"), label: Text("표시 글자"), bg: Text("배경"), fg: Text("글자"),
+                        hidden: Text("숨기기"), preview: Text("미리보기"), menu: Color.clear
+                    )
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
                     Divider()
-                    ForEach(languages, id: \.self) { lang in
-                        LanguageRow(lang: lang, style: preview(""), order: $order)
+                    ForEach(Array(languages.enumerated()), id: \.element) { index, lang in
+                        LanguageRow(lang: lang, index: index, style: preview(""), order: $order, drag: drag)
                     }
                 }
                 Button("입력 소스 새로고침") { InputSources.shared.reload() }
@@ -413,19 +410,85 @@ struct NumberSlider: View {
     }
 }
 
+final class LanguageDrag: ObservableObject {
+    @Published var dragging: String?
+    @Published var insertion: Int?
+}
+
+func movedLanguages(_ langs: [String], _ lang: String, to insertion: Int) -> [String] {
+    guard let from = langs.firstIndex(of: lang) else { return langs }
+    var result = langs
+    result.remove(at: from)
+    result.insert(lang, at: min(from < insertion ? insertion - 1 : insertion, result.count))
+    return result
+}
+
+struct LanguageColumns<Name: View, Label: View, Bg: View, Fg: View, Hidden: View, Preview: View, Menu: View>: View {
+    let name: Name
+    let label: Label
+    let bg: Bg
+    let fg: Fg
+    let hidden: Hidden
+    let preview: Preview
+    let menu: Menu
+
+    var body: some View {
+        HStack(spacing: 16) {
+            name.frame(maxWidth: .infinity, alignment: .leading)
+            label.frame(width: 56, alignment: .leading)
+            bg.frame(width: 44)
+            fg.frame(width: 44)
+            hidden.frame(width: 44)
+            preview.frame(width: 60, alignment: .trailing)
+            menu.frame(width: 20)
+        }
+    }
+}
+
+struct LanguageDropDelegate: DropDelegate {
+    static let rowHeight: CGFloat = 40
+    let index: Int
+    let drag: LanguageDrag
+    @Binding var order: String
+
+    func validateDrop(info: DropInfo) -> Bool { drag.dragging != nil }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        let insertion = info.location.y < Self.rowHeight / 2 ? index : index + 1
+        if drag.insertion != insertion { drag.insertion = insertion }
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        if drag.insertion == index || drag.insertion == index + 1 { drag.insertion = nil }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer { drag.dragging = nil; drag.insertion = nil }
+        guard let lang = drag.dragging, let insertion = drag.insertion else { return false }
+        let langs = order.split(separator: ",").map(String.init)
+        order = movedLanguages(langs, lang, to: insertion).joined(separator: ",")
+        return true
+    }
+}
+
 struct LanguageRow: View {
     let lang: String
+    let index: Int
     let style: BadgeView
     @Binding var order: String
+    @ObservedObject var drag: LanguageDrag
     @AppStorage private var label: String
     @AppStorage private var bg: String
     @AppStorage private var fg: String
     @AppStorage private var hidden: Bool
 
-    init(lang: String, style: BadgeView, order: Binding<String>) {
+    init(lang: String, index: Int, style: BadgeView, order: Binding<String>, drag: LanguageDrag) {
         self.lang = lang
+        self.index = index
         self.style = style
         _order = order
+        self.drag = drag
         let d = langDefaults(lang)
         _label = AppStorage(wrappedValue: d.label, K.label(lang))
         _bg = AppStorage(wrappedValue: d.bg, K.bg(lang))
@@ -434,60 +497,65 @@ struct LanguageRow: View {
     }
 
     var body: some View {
-        GridRow {
-            HStack(spacing: 6) {
-                Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
-                Text(Locale.current.localizedString(forLanguageCode: lang) ?? lang)
-            }
-            .contentShape(Rectangle())
-            .onDrag {
-                let provider = NSItemProvider()
-                let data = Data(lang.utf8)
-                provider.registerDataRepresentation(forTypeIdentifier: Self.dragType, visibility: .ownProcess) { done in
-                    done(data, nil)
-                    return nil
-                }
-                return provider
-            }
-            TextField("표시 글자", text: $label)
-                .labelsHidden()
-                .roundedInputBorder()
-                .frame(width: 56)
-            ColorPicker("배경", selection: color($bg), supportsOpacity: false).labelsHidden()
-            ColorPicker("글자", selection: color($fg), supportsOpacity: false).labelsHidden()
-            Toggle("숨기기", isOn: $hidden).labelsHidden()
-            preview
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            Menu {
-                Button("위로 이동") { move(by: -1) }.disabled(list.first == lang)
-                Button("아래로 이동") { move(by: 1) }.disabled(list.last == lang)
-                Divider()
-                Button("목록에서 제거") { order = list.filter { $0 != lang }.joined(separator: ",") }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-        }
-        .onDrop(of: [Self.dragType], isTargeted: nil) { providers in
-            guard let provider = providers.first else { return false }
-            _ = provider.loadDataRepresentation(forTypeIdentifier: Self.dragType) { data, _ in
-                guard let data, let dragged = String(data: data, encoding: .utf8) else { return }
-                DispatchQueue.main.async { drop(dragged) }
-            }
-            return true
-        }
+        LanguageColumns(
+            name: handle,
+            label: TextField("표시 글자", text: $label).labelsHidden().roundedInputBorder(),
+            bg: ColorPicker("배경", selection: color($bg), supportsOpacity: false).labelsHidden(),
+            fg: ColorPicker("글자", selection: color($fg), supportsOpacity: false).labelsHidden(),
+            hidden: Toggle("숨기기", isOn: $hidden).labelsHidden(),
+            preview: preview,
+            menu: menu
+        )
+        .frame(height: LanguageDropDelegate.rowHeight)
+        .contentShape(Rectangle())
+        .overlay(alignment: .top) { indicator(at: index) }
+        .overlay(alignment: .bottom) { indicator(at: index + 1).opacity(list.last == lang ? 1 : 0) }
+        .onDrop(of: [Self.dragType], delegate: LanguageDropDelegate(index: index, drag: drag, order: $order))
     }
 
     private static let dragType = "io.github.hikijun97.cheatime.language"
 
-    private func drop(_ dragged: String) {
-        var langs = list
-        guard dragged != lang, let from = langs.firstIndex(of: dragged), let to = langs.firstIndex(of: lang) else { return }
-        langs.remove(at: from)
-        langs.insert(dragged, at: to)
-        order = langs.joined(separator: ",")
+    private var handle: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
+            Text(Locale.current.localizedString(forLanguageCode: lang) ?? lang).lineLimit(1)
+        }
+        .contentShape(Rectangle())
+        .onDrag {
+            drag.dragging = lang
+            let provider = NSItemProvider()
+            provider.registerDataRepresentation(forTypeIdentifier: Self.dragType, visibility: .ownProcess) { done in
+                done(Data(), nil)
+                return nil
+            }
+            return provider
+        }
+    }
+
+    private var menu: some View {
+        Menu {
+            Button("위로 이동") { move(by: -1) }.disabled(list.first == lang)
+            Button("아래로 이동") { move(by: 1) }.disabled(list.last == lang)
+            Divider()
+            Button("목록에서 제거") { order = list.filter { $0 != lang }.joined(separator: ",") }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    @ViewBuilder
+    private func indicator(at insertion: Int) -> some View {
+        if drag.insertion == insertion, let dragging = drag.dragging,
+           movedLanguages(list, dragging, to: insertion) != list {
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(height: 3)
+                .offset(y: insertion == index ? -1.5 : 1.5)
+                .allowsHitTesting(false)
+        }
     }
 
     private var list: [String] { order.split(separator: ",").map(String.init) }
