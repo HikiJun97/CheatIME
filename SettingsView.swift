@@ -5,6 +5,7 @@ struct SettingsView: View {
         TabView {
             BadgeTab().tabItem { Label("뱃지", systemImage: "textformat") }
             PositionTab().tabItem { Label("위치", systemImage: "rectangle.dashed") }
+            AppsTab().tabItem { Label("앱", systemImage: "app.badge") }
         }
         .frame(width: 620, height: 660)
     }
