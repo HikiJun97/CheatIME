@@ -22,6 +22,7 @@ enum K {
     static let vAlign = "vAlign"
     static let marginX = "marginX"
     static let marginY = "marginY"
+    static let settingsTab = "settingsTab"
     static func label(_ lang: String) -> String { "lang.\(lang).label" }
     static func bg(_ lang: String) -> String { "lang.\(lang).bg" }
     static func fg(_ lang: String) -> String { "lang.\(lang).fg" }
@@ -33,7 +34,7 @@ func registerDefaults() {
         K.visible: true, K.positionMode: "fixed", K.displayMode: "all", K.displays: "", K.shape: "rounded",
         K.fontSize: 15.0, K.dotSize: 12.0, K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF",
         K.opacity: 0.9, K.glass: false, K.sound: false, K.rules: "[]", K.appFilter: false, K.filterApps: "", K.soundName: "Tink",
-        K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
+        K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0, K.settingsTab: "badge",
     ])
 }
 

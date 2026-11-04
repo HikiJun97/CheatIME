@@ -1,7 +1,6 @@
 "설정…" = "Settings…";
 "뱃지 표시" = "Show Badge";
 "CheatIME 종료" = "Quit CheatIME";
-"CheatIME 설정" = "CheatIME Settings";
 "디스플레이" = "Display";
 "표시할 곳" = "Show on";
 "모든 디스플레이" = "All displays";
@@ -72,3 +71,4 @@
 "점선" = "Dotted";
 "테두리 두께" = "Border width";
 "테두리 색" = "Border color";
+"설정" = "Settings";

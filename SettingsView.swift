@@ -1,23 +1,34 @@
 import SwiftUI
 
-func settingsController() -> NSTabViewController {
-    let tabs = NSTabViewController()
-    tabs.tabStyle = .toolbar
-    tabs.canPropagateSelectedChildViewControllerTitle = false
-    func add(_ title: String, _ symbol: String, _ view: some View) {
-        let host = NSHostingController(rootView: view.frame(width: 620, height: 620))
-        host.sizingOptions = .preferredContentSize
-        let item = NSTabViewItem(viewController: host)
-        item.label = NSLocalizedString(title, comment: "")
-        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-        tabs.addTabViewItem(item)
+struct SettingsView: View {
+    @AppStorage(K.settingsTab) private var tab = "badge"
+
+    private let panes: [(id: String, title: LocalizedStringKey)] = [
+        ("badge", "뱃지"), ("position", "위치"), ("apps", "앱"), ("rules", "자동 전환"), ("general", "일반"),
+    ]
+
+    var body: some View {
+        Group {
+            switch tab {
+            case "position": PositionTab()
+            case "apps": AppsTab()
+            case "rules": RulesTab()
+            case "general": GeneralTab()
+            default: BadgeTab()
+            }
+        }
+        .frame(width: 620, height: 620)
+        .navigationTitle(Text(panes.first { $0.id == tab }?.title ?? "뱃지"))
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("설정", selection: $tab) {
+                    ForEach(panes, id: \.id) { Text($0.title).tag($0.id) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+        }
     }
-    add("뱃지", "textformat", BadgeTab())
-    add("위치", "rectangle.dashed", PositionTab())
-    add("앱", "app.badge", AppsTab())
-    add("자동 전환", "arrow.triangle.2.circlepath", RulesTab())
-    add("일반", "gearshape", GeneralTab())
-    return tabs
 }
 
 struct BadgeTab: View {

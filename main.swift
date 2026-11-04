@@ -79,10 +79,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentViewController: settingsController())
-            window.toolbarStyle = .preference
+            let controller = NSHostingController(rootView: SettingsView())
+            controller.sceneBridgingOptions = [.toolbars, .title]
+            let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .miniaturizable],
+                                  backing: .buffered, defer: false)
+            window.contentViewController = controller
+            window.titleVisibility = .hidden
+            window.toolbarStyle = .unified
             window.center()
-            window.title = NSLocalizedString("CheatIME 설정", comment: "")
             window.isReleasedWhenClosed = false
             settingsWindow = window
         }
