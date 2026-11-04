@@ -109,7 +109,8 @@ final class Overlay {
         let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
             || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
         let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
-        let screens = visible ? targetScreens() : []
+        let follow = d.string(forKey: K.positionMode) != "fixed"
+        let screens = visible ? (follow ? [screenUnderMouse()] : targetScreens()) : []
         let badge = BadgeView(lang: lang)
         inset = badge.inset
 
@@ -119,12 +120,40 @@ final class Overlay {
             let host = panel.contentView as! BadgeHost
             host.rootView = badge
             let size = NSSize(width: host.fittingSize.width - 2 * inset, height: host.fittingSize.height - 2 * inset)
-            panel.setFrame(frame(for: size, on: screens[i]).insetBy(dx: -inset, dy: -inset), display: true)
+            let rect = follow ? NSRect(origin: followOrigin(for: size), size: size) : frame(for: size, on: screens[i])
+            panel.ignoresMouseEvents = follow
+            panel.setFrame(rect.insetBy(dx: -inset, dy: -inset), display: true)
             panel.orderFrontRegardless()
         }
     }
 
-    func followMouse() {
+    func tick() {
+        guard UserDefaults.standard.string(forKey: K.positionMode) != "fixed" else { return followMouse() }
+        guard let panel = panels.first, panel.isVisible else { return }
+        let size = NSSize(width: panel.frame.width - 2 * inset, height: panel.frame.height - 2 * inset)
+        let origin = followOrigin(for: size)
+        let target = NSPoint(x: origin.x - inset, y: origin.y - inset)
+        if panel.frame.origin != target { panel.setFrameOrigin(target) }
+    }
+
+    private func followOrigin(for size: NSSize) -> NSPoint {
+        let anchor: NSPoint
+        var p: NSPoint
+        if UserDefaults.standard.string(forKey: K.positionMode) == "caret", let caret = caretRect() {
+            anchor = caret.origin
+            p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
+        } else {
+            anchor = NSEvent.mouseLocation
+            p = NSPoint(x: anchor.x + 16, y: anchor.y - 16 - size.height)
+        }
+        let screen = NSScreen.screens.first { NSMouseInRect(anchor, $0.frame, false) } ?? NSScreen.screens[0]
+        let v = screen.visibleFrame
+        p.x = min(max(p.x, v.minX), v.maxX - size.width)
+        p.y = min(max(p.y, v.minY), v.maxY - size.height)
+        return p
+    }
+
+    private func followMouse() {
         guard UserDefaults.standard.string(forKey: K.displayMode) == "mouse",
               NSEvent.pressedMouseButtons == 0 else { return }
         let screen = screenUnderMouse()

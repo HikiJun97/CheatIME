@@ -49,8 +49,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: onChange)
-        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [overlay] _ in
-            MainActor.assumeIsolated { overlay.followMouse() }
+        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [overlay] _ in
+            MainActor.assumeIsolated { overlay.tick() }
         }
 
         refresh()
