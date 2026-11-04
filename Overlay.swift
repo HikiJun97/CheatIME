@@ -6,22 +6,26 @@ struct BadgeView: View {
     var fg: Color
     var shape: String
     var fontSize: Double
+    var dotSize: Double
     var opacity: Double
     var glass: Bool
+    var border = "none"
+    var borderWidth = 0.0
+    var borderColor = Color.clear
     var inset: Double = 0
 
     var body: some View {
         let isDot = shape == "dot"
-        let h = isDot ? fontSize * 0.9 : fontSize * 1.8
-        let outline = switch shape {
-        case "circle", "dot": AnyShape(Circle())
-        case "capsule": AnyShape(Capsule())
-        default: AnyShape(RoundedRectangle(cornerRadius: fontSize * 0.4))
-        }
+        let h = isDot ? dotSize : fontSize * 1.8
         let padding = switch shape {
         case "circle", "dot": 0.0
         case "capsule": fontSize * 0.7
         default: fontSize * 0.5
+        }
+        let dash: [CGFloat] = switch border {
+        case "dashed": [borderWidth * 3, borderWidth * 2]
+        case "dotted": [0, borderWidth * 2]
+        default: []
         }
         let text = Text(isDot ? "" : label)
             .font(.system(size: fontSize, weight: .bold))
@@ -34,14 +38,30 @@ struct BadgeView: View {
             .frame(height: h)
         Group {
             if glass, #available(macOS 26, *) {
-                text.glassEffect(.regular.tint(bg), in: outline)
+                text.glassEffect(.regular.tint(bg), in: outline())
             } else {
-                text.background(bg, in: outline)
+                text.background(bg, in: outline())
+                    .overlay {
+                        if border != "none" {
+                            outline(inset: borderWidth / 2)
+                                .stroke(borderColor, style: StrokeStyle(lineWidth: borderWidth, lineCap: .round,
+                                                                        lineJoin: .round, dash: dash))
+                                .padding(borderWidth / 2)
+                        }
+                    }
             }
         }
         .opacity(opacity)
         .padding(inset)
         .fixedSize()
+    }
+
+    private func outline(inset: Double = 0) -> AnyShape {
+        switch shape {
+        case "circle", "dot": AnyShape(Circle())
+        case "capsule": AnyShape(Capsule(style: .circular))
+        default: AnyShape(RoundedRectangle(cornerRadius: max(0, fontSize * 0.4 - inset)))
+        }
     }
 }
 
@@ -56,8 +76,12 @@ extension BadgeView {
                   fg: Color(hex: d.string(forKey: K.fg(lang)) ?? l.fg),
                   shape: d.string(forKey: K.shape) ?? "",
                   fontSize: fontSize,
+                  dotSize: d.double(forKey: K.dotSize),
                   opacity: d.double(forKey: K.opacity),
                   glass: glass,
+                  border: d.string(forKey: K.border) ?? "none",
+                  borderWidth: d.double(forKey: K.borderWidth),
+                  borderColor: Color(hex: d.string(forKey: K.borderColor) ?? "#FFFFFF"),
                   inset: glass ? max(8, fontSize * 0.5) : 0)
     }
 }

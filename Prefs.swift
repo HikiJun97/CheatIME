@@ -7,6 +7,10 @@ enum K {
     static let displays = "displays"
     static let shape = "shape"
     static let fontSize = "fontSize"
+    static let dotSize = "dotSize"
+    static let border = "border"
+    static let borderWidth = "borderWidth"
+    static let borderColor = "borderColor"
     static let opacity = "opacity"
     static let glass = "glass"
     static let appFilter = "appFilter"
@@ -27,7 +31,8 @@ enum K {
 func registerDefaults() {
     UserDefaults.standard.register(defaults: [
         K.visible: true, K.positionMode: "fixed", K.displayMode: "all", K.displays: "", K.shape: "rounded",
-        K.fontSize: 15.0, K.opacity: 0.9, K.glass: false, K.sound: false, K.rules: "[]", K.appFilter: false, K.filterApps: "", K.soundName: "Tink",
+        K.fontSize: 15.0, K.dotSize: 12.0, K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF",
+        K.opacity: 0.9, K.glass: false, K.sound: false, K.rules: "[]", K.appFilter: false, K.filterApps: "", K.soundName: "Tink",
         K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
     ])
 }

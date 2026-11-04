@@ -79,9 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openSettings() {
         if settingsWindow == nil {
-            let controller = NSHostingController(rootView: SettingsView())
-            let window = NSWindow(contentViewController: controller)
-            window.setContentSize(controller.view.fittingSize)
+            let window = NSWindow(contentViewController: settingsController())
+            window.toolbarStyle = .preference
             window.center()
             window.title = NSLocalizedString("CheatIME 설정", comment: "")
             window.isReleasedWhenClosed = false

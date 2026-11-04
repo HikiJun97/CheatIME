@@ -64,3 +64,11 @@
 "시스템 설정에서 승인해야 합니다." = "Approval is required in System Settings.";
 "로그인 항목 열기" = "Open Login Items";
 "버전" = "Version";
+"점 크기" = "Dot size";
+"테두리" = "Border";
+"없음" = "None";
+"실선" = "Solid";
+"파선" = "Dashed";
+"점선" = "Dotted";
+"테두리 두께" = "Border width";
+"테두리 색" = "Border color";

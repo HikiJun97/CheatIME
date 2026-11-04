@@ -18,7 +18,7 @@ If you type in more than one language and spend your day in a terminal, Vim, or 
 - Works with input sources for any language, from any vendor, because it detects the language rather than the specific input method
 - Korean, Japanese, and English come with preset labels and colors. Other languages show their language code (for example ZH, RU, or AR) until you customize them.
 - Per-language label, background color, and text color, plus an option to hide the badge for specific languages
-- A choice of shapes (rounded rectangle, capsule, circle, or minimal dot), adjustable font size and opacity, and an optional Liquid Glass look (macOS 26 or later)
+- A choice of shapes (rounded rectangle, capsule, circle, or minimal dot), adjustable font size (or dot size) and opacity, an optional solid, dashed, or dotted border, and an optional Liquid Glass look (macOS 26 or later)
 - Optional sound when the input source changes, using any of the macOS system sounds (macOS has no built-in option for this)
 
 **Placement**

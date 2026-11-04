@@ -1,23 +1,34 @@
 import SwiftUI
 
-struct SettingsView: View {
-    var body: some View {
-        TabView {
-            BadgeTab().tabItem { Label("뱃지", systemImage: "textformat") }
-            PositionTab().tabItem { Label("위치", systemImage: "rectangle.dashed") }
-            AppsTab().tabItem { Label("앱", systemImage: "app.badge") }
-            RulesTab().tabItem { Label("자동 전환", systemImage: "arrow.triangle.2.circlepath") }
-            GeneralTab().tabItem { Label("일반", systemImage: "gearshape") }
-        }
-        .frame(width: 620, height: 660)
+func settingsController() -> NSTabViewController {
+    let tabs = NSTabViewController()
+    tabs.tabStyle = .toolbar
+    tabs.canPropagateSelectedChildViewControllerTitle = false
+    func add(_ title: String, _ symbol: String, _ view: some View) {
+        let host = NSHostingController(rootView: view.frame(width: 620, height: 620))
+        host.sizingOptions = .preferredContentSize
+        let item = NSTabViewItem(viewController: host)
+        item.label = NSLocalizedString(title, comment: "")
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        tabs.addTabViewItem(item)
     }
+    add("뱃지", "textformat", BadgeTab())
+    add("위치", "rectangle.dashed", PositionTab())
+    add("앱", "app.badge", AppsTab())
+    add("자동 전환", "arrow.triangle.2.circlepath", RulesTab())
+    add("일반", "gearshape", GeneralTab())
+    return tabs
 }
 
 struct BadgeTab: View {
     @AppStorage(K.shape) private var shape = "rounded"
     @AppStorage(K.fontSize) private var fontSize = 15.0
+    @AppStorage(K.dotSize) private var dotSize = 12.0
     @AppStorage(K.opacity) private var opacity = 0.9
     @AppStorage(K.glass) private var glass = false
+    @AppStorage(K.border) private var border = "none"
+    @AppStorage(K.borderWidth) private var borderWidth = 2.0
+    @AppStorage(K.borderColor) private var borderColor = "#FFFFFF"
     @AppStorage(K.sound) private var sound = false
     @AppStorage(K.soundName) private var soundName = "Tink"
 
@@ -40,7 +51,10 @@ struct BadgeTab: View {
                     .foregroundStyle(.secondary)
                     Divider()
                     ForEach(languages, id: \.self) { lang in
-                        LanguageRow(lang: lang, shape: shape, fontSize: fontSize, opacity: opacity, glass: glass)
+                        LanguageRow(lang: lang, style: BadgeView(
+                            label: "", bg: .clear, fg: .clear, shape: shape, fontSize: min(fontSize, 20),
+                            dotSize: min(dotSize, 20), opacity: opacity, glass: glass, border: border,
+                            borderWidth: borderWidth, borderColor: Color(hex: borderColor)))
                     }
                 }
             }
@@ -55,9 +69,28 @@ struct BadgeTab: View {
                 if #available(macOS 26, *) {
                     Toggle("유리 효과 (Liquid Glass)", isOn: $glass)
                 }
-                NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
+                if shape == "dot" {
+                    NumberSlider(title: "점 크기", value: $dotSize, range: 4...40)
+                } else {
+                    NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
+                }
                 NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
                              range: 20...100)
+                if !glass {
+                    Picker("테두리", selection: $border) {
+                        Text("없음").tag("none")
+                        Text("실선").tag("solid")
+                        Text("파선").tag("dashed")
+                        Text("점선").tag("dotted")
+                    }
+                    .pickerStyle(.segmented)
+                    if border != "none" {
+                        NumberSlider(title: "테두리 두께", value: $borderWidth, range: 1...8)
+                        ColorPicker("테두리 색", selection: Binding(get: { Color(hex: borderColor) },
+                                                                 set: { borderColor = $0.hex }),
+                                    supportsOpacity: false)
+                    }
+                }
             }
             Section("소리") {
                 Toggle("입력기가 바뀔 때 소리 내기", isOn: $sound)
@@ -187,21 +220,15 @@ struct NumberSlider: View {
 
 struct LanguageRow: View {
     let lang: String
-    let shape: String
-    let fontSize: Double
-    let opacity: Double
-    let glass: Bool
+    let style: BadgeView
     @AppStorage private var label: String
     @AppStorage private var bg: String
     @AppStorage private var fg: String
     @AppStorage private var hidden: Bool
 
-    init(lang: String, shape: String, fontSize: Double, opacity: Double, glass: Bool) {
+    init(lang: String, style: BadgeView) {
         self.lang = lang
-        self.glass = glass
-        self.shape = shape
-        self.fontSize = fontSize
-        self.opacity = opacity
+        self.style = style
         let d = langDefaults(lang)
         _label = AppStorage(wrappedValue: d.label, K.label(lang))
         _bg = AppStorage(wrappedValue: d.bg, K.bg(lang))
@@ -219,10 +246,18 @@ struct LanguageRow: View {
             ColorPicker("배경", selection: color($bg), supportsOpacity: false).labelsHidden()
             ColorPicker("글자", selection: color($fg), supportsOpacity: false).labelsHidden()
             Toggle("숨기기", isOn: $hidden).labelsHidden()
-            BadgeView(label: label, bg: Color(hex: bg), fg: Color(hex: fg), shape: shape,
-                      fontSize: min(fontSize, 20), opacity: hidden ? 0.2 : opacity, glass: glass)
+            preview
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
+    }
+
+    private var preview: BadgeView {
+        var badge = style
+        badge.label = label
+        badge.bg = Color(hex: bg)
+        badge.fg = Color(hex: fg)
+        if hidden { badge.opacity = 0.2 }
+        return badge
     }
 
     private func color(_ hex: Binding<String>) -> Binding<Color> {
