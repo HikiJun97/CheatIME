@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var showItem: NSMenuItem!
     var settingsWindow: NSWindow?
+    var lastLanguage: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         menu.addItem(withTitle: NSLocalizedString("설정…", comment: ""),
@@ -46,6 +47,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func refresh() {
+        let lang = currentLanguage()
+        let d = UserDefaults.standard
+        if let lastLanguage, lastLanguage != lang, d.bool(forKey: K.sound) {
+            NSSound(named: d.string(forKey: K.soundName) ?? "Tink")?.play()
+        }
+        lastLanguage = lang
         overlay.update()
         showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
     }

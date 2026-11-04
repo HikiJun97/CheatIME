@@ -8,6 +8,8 @@ enum K {
     static let fontSize = "fontSize"
     static let opacity = "opacity"
     static let glass = "glass"
+    static let sound = "sound"
+    static let soundName = "soundName"
     static let hAlign = "hAlign"
     static let vAlign = "vAlign"
     static let marginX = "marginX"
@@ -21,7 +23,7 @@ enum K {
 func registerDefaults() {
     UserDefaults.standard.register(defaults: [
         K.visible: true, K.displayMode: "all", K.displays: "", K.shape: "rounded",
-        K.fontSize: 15.0, K.opacity: 0.9, K.glass: false,
+        K.fontSize: 15.0, K.opacity: 0.9, K.glass: false, K.sound: false, K.soundName: "Tink",
         K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
     ])
 }
@@ -47,4 +49,9 @@ extension Color {
         return String(format: "#%02X%02X%02X", Int(round(c.redComponent * 255)),
                       Int(round(c.greenComponent * 255)), Int(round(c.blueComponent * 255)))
     }
+}
+
+func systemSounds() -> [String] {
+    let files = (try? FileManager.default.contentsOfDirectory(atPath: "/System/Library/Sounds")) ?? []
+    return files.map { ($0 as NSString).deletingPathExtension }.sorted()
 }

@@ -15,8 +15,11 @@ struct BadgeTab: View {
     @AppStorage(K.fontSize) private var fontSize = 15.0
     @AppStorage(K.opacity) private var opacity = 0.9
     @AppStorage(K.glass) private var glass = false
+    @AppStorage(K.sound) private var sound = false
+    @AppStorage(K.soundName) private var soundName = "Tink"
 
     private let languages = enabledLanguages()
+    private let sounds = systemSounds()
 
     var body: some View {
         Form {
@@ -43,6 +46,7 @@ struct BadgeTab: View {
                     Text("둥근 사각형").tag("rounded")
                     Text("캡슐").tag("capsule")
                     Text("원").tag("circle")
+                    Text("점").tag("dot")
                 }
                 .pickerStyle(.segmented)
                 if #available(macOS 26, *) {
@@ -51,6 +55,14 @@ struct BadgeTab: View {
                 NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
                 NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
                              range: 20...100)
+            }
+            Section("소리") {
+                Toggle("입력기가 바뀔 때 소리 내기", isOn: $sound)
+                Picker("소리", selection: $soundName) {
+                    ForEach(sounds, id: \.self) { Text($0).tag($0) }
+                }
+                .disabled(!sound)
+                .onChange(of: soundName) { NSSound(named: soundName)?.play() }
             }
         }
         .formStyle(.grouped)
