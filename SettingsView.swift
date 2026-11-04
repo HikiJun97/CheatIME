@@ -1,35 +1,25 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage(K.displayMode) private var displayMode = "all"
-    @AppStorage(K.displays) private var displays = ""
+    var body: some View {
+        TabView {
+            BadgeTab().tabItem { Label("뱃지", systemImage: "textformat") }
+            PositionTab().tabItem { Label("위치", systemImage: "rectangle.dashed") }
+        }
+        .frame(width: 620, height: 660)
+    }
+}
+
+struct BadgeTab: View {
     @AppStorage(K.shape) private var shape = "rounded"
     @AppStorage(K.fontSize) private var fontSize = 15.0
     @AppStorage(K.opacity) private var opacity = 0.9
     @AppStorage(K.glass) private var glass = false
-    @AppStorage(K.hAlign) private var hAlign = "right"
-    @AppStorage(K.vAlign) private var vAlign = "bottom"
-    @AppStorage(K.marginX) private var marginX = 12.0
-    @AppStorage(K.marginY) private var marginY = 12.0
 
     private let languages = enabledLanguages()
-    private let screens = NSScreen.screens
-    private let maxMargin = (NSScreen.screens.map { max($0.visibleFrame.width, $0.visibleFrame.height) }.max() ?? 800) / 2
 
     var body: some View {
         Form {
-            Section("디스플레이") {
-                Picker("표시할 곳", selection: $displayMode) {
-                    Text("모든 디스플레이").tag("all")
-                    Text("마우스가 있는 디스플레이").tag("mouse")
-                    Text("직접 선택").tag("selected")
-                }
-                if displayMode == "selected" {
-                    ForEach(screens, id: \.uuid) { screen in
-                        Toggle(screen.localizedName, isOn: chosen(screen.uuid))
-                    }
-                }
-            }
             Section("언어별 표시") {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
                     GridRow {
@@ -62,6 +52,36 @@ struct SettingsView: View {
                 NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
                              range: 20...100)
             }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct PositionTab: View {
+    @AppStorage(K.displayMode) private var displayMode = "all"
+    @AppStorage(K.displays) private var displays = ""
+    @AppStorage(K.hAlign) private var hAlign = "right"
+    @AppStorage(K.vAlign) private var vAlign = "bottom"
+    @AppStorage(K.marginX) private var marginX = 12.0
+    @AppStorage(K.marginY) private var marginY = 12.0
+
+    private let screens = NSScreen.screens
+    private let maxMargin = (NSScreen.screens.map { max($0.visibleFrame.width, $0.visibleFrame.height) }.max() ?? 800) / 2
+
+    var body: some View {
+        Form {
+            Section("디스플레이") {
+                Picker("표시할 곳", selection: $displayMode) {
+                    Text("모든 디스플레이").tag("all")
+                    Text("마우스가 있는 디스플레이").tag("mouse")
+                    Text("직접 선택").tag("selected")
+                }
+                if displayMode == "selected" {
+                    ForEach(screens, id: \.uuid) { screen in
+                        Toggle(screen.localizedName, isOn: chosen(screen.uuid))
+                    }
+                }
+            }
             Section("위치") {
                 Picker("가로", selection: $hAlign) {
                     Text("왼쪽").tag("left")
@@ -80,8 +100,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 560)
-        .frame(minHeight: 400, idealHeight: 720)
     }
 
     private func chosen(_ uuid: String) -> Binding<Bool> {
