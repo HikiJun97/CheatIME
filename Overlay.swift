@@ -11,24 +11,25 @@ struct BadgeView: View {
     var inset: Double = 0
 
     var body: some View {
-        let h = fontSize * 1.8
+        let isDot = shape == "dot"
+        let h = isDot ? fontSize * 0.9 : fontSize * 1.8
         let outline = switch shape {
-        case "circle": AnyShape(Circle())
+        case "circle", "dot": AnyShape(Circle())
         case "capsule": AnyShape(Capsule())
         default: AnyShape(RoundedRectangle(cornerRadius: fontSize * 0.4))
         }
         let padding = switch shape {
-        case "circle": 0.0
+        case "circle", "dot": 0.0
         case "capsule": fontSize * 0.7
         default: fontSize * 0.5
         }
-        let text = Text(label)
+        let text = Text(isDot ? "" : label)
             .font(.system(size: fontSize, weight: .bold))
             .foregroundStyle(fg)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
             .padding(.horizontal, padding)
-            .frame(width: shape == "circle" ? h : nil)
+            .frame(width: shape == "circle" || isDot ? h : nil)
             .frame(minWidth: h)
             .frame(height: h)
         Group {
