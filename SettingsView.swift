@@ -186,11 +186,11 @@ struct PositionTab: View {
                 if showCaret {
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
                         if AXIsProcessTrusted() {
-                            Label("손쉬운 사용 권한이 허용되어 있습니다.", systemImage: "checkmark.circle")
+                            Label("텍스트 커서 위치를 읽을 권한이 허용되어 있습니다.", systemImage: "checkmark.circle")
                                 .foregroundStyle(.green)
                         } else {
                             HStack {
-                                Label("텍스트 커서 위치를 읽으려면 손쉬운 사용 권한이 필요합니다.",
+                                Label("텍스트 커서 위치를 읽으려면 권한이 필요합니다.",
                                       systemImage: "exclamationmark.triangle")
                                     .foregroundStyle(.orange)
                                 Spacer()

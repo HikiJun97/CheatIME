@@ -21,11 +21,11 @@ If you type in more than one language and spend your day in a terminal, Vim, or 
 - A choice of shapes (rounded rectangle, capsule, circle, or minimal dot), adjustable font size (or dot size) and opacity, an optional solid, dashed, or dotted border, and an optional Liquid Glass look (macOS 26 or later)
 - Optional sound when the input source changes, using any of the macOS system sounds (macOS has no built-in option for this)
 
-**Placement**
+**Badge positions**
 - Turn on any combination of the three positions below, for example a fixed badge in the corner plus one next to the text cursor. Each position has its own shape, size, opacity, border, and Liquid Glass setting.
 - Fixed: a 3×3 alignment grid with margins, on all displays, the display with the pointer, or the displays you choose. You can also just drag the badge.
 - Next to pointer: the badge follows the mouse pointer.
-- Next to text cursor: the badge sits beside the text cursor. This requires Accessibility access. In apps that don't report a text cursor (some terminals, for example), it can fall back to the pointer (an option you can turn off); it stays hidden if Next to pointer is also on.
+- Next to text cursor: the badge sits beside the text cursor. This requires Accessibility access (called Device Control and Data Access in macOS 27). In apps that don't report a text cursor (some terminals, for example), it can fall back to the pointer (an option you can turn off); it stays hidden if Next to pointer is also on.
 
 **Apps**
 - Show the badge only when one of the apps you check is in front. Checked apps are listed first.
@@ -65,9 +65,9 @@ To start CheatIME automatically, turn on **Open at login** in Settings → Gener
 
 ### Accessibility access
 
-Only the **Next to text cursor** placement needs it. Select it in Settings → Position, then allow CheatIME in **System Settings → Privacy & Security → Accessibility**.
+Only the **Next to text cursor** position needs it. Turn it on in Settings → Position, then allow CheatIME in **System Settings → Privacy & Security → Accessibility** (**Device Control and Data Access** in macOS 27).
 
-Because CheatIME is not signed with an Apple Developer ID, macOS treats every new version as a different app. After you update, remove CheatIME from the Accessibility list and allow it again.
+Because CheatIME is not signed with an Apple Developer ID, macOS treats every new version as a different app. After you update, remove CheatIME from that list and allow it again.
 
 ## Build from source
 

@@ -42,8 +42,8 @@
 "고정 위치" = "Fixed";
 "마우스 포인터 옆" = "Next to pointer";
 "텍스트 커서 옆" = "Next to text cursor";
-"손쉬운 사용 권한이 허용되어 있습니다." = "Accessibility access is granted.";
-"텍스트 커서 위치를 읽으려면 손쉬운 사용 권한이 필요합니다." = "Accessibility access is required to read the text cursor position.";
+"텍스트 커서 위치를 읽을 권한이 허용되어 있습니다." = "Permission to read the text cursor position is granted.";
+"텍스트 커서 위치를 읽으려면 권한이 필요합니다." = "Permission is required to read the text cursor position.";
 "권한 설정 열기" = "Open Settings";
 "선택한 앱이 앞에 있을 때만 뱃지 표시" = "Show the badge only when a selected app is in front";
 "앱 검색" = "Search apps";
