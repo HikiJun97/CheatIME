@@ -79,3 +79,5 @@ CheatIME는 키 입력을 읽지 않습니다. 업데이트를 확인할 때만 
 ## 라이선스
 
 [MIT](LICENSE)
+
+업데이트에는 [Sparkle](https://sparkle-project.org)을 쓰며, Sparkle의 라이선스는 앱에 함께 들어 있습니다.

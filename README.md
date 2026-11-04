@@ -79,3 +79,5 @@ CheatIME doesn't read your keystrokes. It connects to GitHub only to check for u
 ## License
 
 [MIT](LICENSE)
+
+Updates use [Sparkle](https://sparkle-project.org); its license is included in the app.

@@ -79,3 +79,5 @@ CheatIME はキー入力を読み取りません。ネットワークに接続�
 ## ライセンス
 
 [MIT](LICENSE)
+
+アップデートには [Sparkle](https://sparkle-project.org) を使っています。Sparkle のライセンスはアプリに同梱しています。

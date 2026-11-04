@@ -81,3 +81,5 @@ CheatIME 不读取键盘输入，只在检查更新时连接 GitHub，可在 Set
 ## 许可证
 
 [MIT](LICENSE)
+
+更新功能使用 [Sparkle](https://sparkle-project.org)，其许可证随应用一同提供。
