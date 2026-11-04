@@ -37,6 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil, queue: .main, using: onChange)
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: onChange)
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main, using: onChange)
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: onChange)
         Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [overlay] _ in

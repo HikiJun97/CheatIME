@@ -105,7 +105,10 @@ final class Overlay {
     func update() {
         let d = UserDefaults.standard
         let lang = currentLanguage()
-        let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang))
+        let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
+            || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
+        let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
         let screens = visible ? targetScreens() : []
         let badge = BadgeView(lang: lang)
         inset = badge.inset
