@@ -72,6 +72,11 @@ defaults delete io.github.hikijun97.cheatime
 
 CheatIME 不读取键盘输入，也不联网。辅助功能权限仅用于查找文本光标的位置。
 
+## 灵感来源
+
+- [ShowyEdge](https://github.com/pqrs-org/ShowyEdge)
+- [Input Source Pro](https://github.com/runjuu/InputSourcePro)
+
 ## 许可证
 
 [MIT](LICENSE)

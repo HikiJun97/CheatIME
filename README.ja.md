@@ -70,6 +70,11 @@ defaults delete io.github.hikijun97.cheatime
 
 CheatIME はキー入力を読み取らず、ネットワークにも接続しません。アクセシビリティへのアクセスは、テキストカーソルの位置を調べるためだけに使います。
 
+## 影響を受けたプロジェクト
+
+- [ShowyEdge](https://github.com/pqrs-org/ShowyEdge)
+- [Input Source Pro](https://github.com/runjuu/InputSourcePro)
+
 ## ライセンス
 
 [MIT](LICENSE)

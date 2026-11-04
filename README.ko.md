@@ -70,6 +70,11 @@ defaults delete io.github.hikijun97.cheatime
 
 CheatIME는 키 입력을 읽지 않고 네트워크에 연결하지 않습니다. 손쉬운 사용 권한은 텍스트 커서 위치를 찾는 데만 씁니다.
 
+## 영감을 준 프로젝트
+
+- [ShowyEdge](https://github.com/pqrs-org/ShowyEdge)
+- [Input Source Pro](https://github.com/runjuu/InputSourcePro)
+
 ## 라이선스
 
 [MIT](LICENSE)

@@ -70,6 +70,11 @@ defaults delete io.github.hikijun97.cheatime
 
 CheatIME doesn't read your keystrokes or connect to the network. Accessibility access is used only to find the text cursor.
 
+## Inspired by
+
+- [ShowyEdge](https://github.com/pqrs-org/ShowyEdge)
+- [Input Source Pro](https://github.com/runjuu/InputSourcePro)
+
 ## License
 
 [MIT](LICENSE)
