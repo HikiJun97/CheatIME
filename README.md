@@ -3,19 +3,20 @@
 <h1 align="center">CheatIME</h1>
 
 <p align="center">
-An always-on-top badge that shows your current input language (한 / EN / あ) on macOS.<br>
+An always-on-top badge that shows your current input language on macOS, whatever languages you type in.<br>
 <b>English</b> · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-If you type in more than one language and spend your day in a terminal, Vim, or other CLI tools, you know the pain: you press a shortcut, nothing happens, and only then do you notice the input source is still set to Korean, Japanese, or Chinese. CheatIME puts a small badge on screen so you can tell your input language at a glance, and it can switch the input source for you when you move to a particular app.
+If you type in more than one language and spend your day in a terminal, Vim, or other CLI tools, you know the pain: you press a shortcut, nothing happens, and only then do you notice the input source is still set to another language. CheatIME puts a small badge on screen so you can tell your input language at a glance, and it can switch the input source for you when you move to a particular app.
 
-<p align="center"><img src="docs/badges.png" width="480" alt="Badge shapes"></p>
+<p align="center"><img src="docs/badges.png" width="560" alt="Example badges for several languages and shapes"></p>
 
 ## Features
 
 **Badge**
 - Always on top, on every Space and over full-screen apps
-- Works with any input method (Apple, Gureum, Kotoeri, and others) because it detects the language, not the input method
+- Works with input sources for any language, from any vendor, because it detects the language rather than the specific input method
+- Korean, Japanese, and English come with preset labels and colors. Other languages show their language code (for example ZH, RU, or AR) until you customize them.
 - Per-language label, background color, and text color, plus an option to hide the badge for specific languages
 - A choice of shapes (rounded rectangle, capsule, circle, or minimal dot), adjustable font size and opacity, and an optional Liquid Glass look (macOS 26 or later)
 - Optional sound when the input source changes, using any of the macOS system sounds (macOS has no built-in option for this)
@@ -32,7 +33,7 @@ If you type in more than one language and spend your day in a terminal, Vim, or 
 **Everything else**
 - Click the badge to hide it; right-click (or Control-click) to open the menu
 - Open at login
-- Interface in English, Korean, and Japanese
+- Settings and menus are available in English, Korean, and Japanese. This applies only to the app's own interface; the badge works with input sources in any language.
 - No network access, and it never reads your keystrokes
 
 <p align="center"><img src="docs/settings-en.png" width="560" alt="Badge settings"></p>

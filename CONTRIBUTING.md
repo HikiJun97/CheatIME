@@ -22,6 +22,7 @@ There is no Xcode project. The `Makefile` calls `swiftc` directly.
 - **Deployment target is macOS 15.** Wrap any newer API in `#available` and provide a fallback. Current examples: `glassEffect` (macOS 26) in `Overlay.swift`, and `textInputBorderShape` (macOS 27) in `roundedInputBorder()` in `SettingsView.swift`.
 - **Don't use `@State`.** In the macOS 27 SDK, SwiftUI's `@State` is a macro, and the Command Line Tools don't include the SwiftUI macro plugin, so it fails to compile there. Use an `ObservableObject` with `@StateObject`, or `@AppStorage`. Keep the code buildable with the Command Line Tools alone.
 - **No code comments.** The codebase is intentionally comment-free. Explain non-obvious decisions in commit messages instead.
+- **Every input language is in scope.** CheatIME aims to work with input sources in any language. `langDefaults()` in `Prefs.swift` presets labels and colors only for Korean, Japanese, and English; every other language must keep working through the fallback (its language code), so don't add logic that assumes a fixed set of languages.
 - **Settings** are stored in `UserDefaults`. Add new keys to `K` and their defaults to `registerDefaults()` in `Prefs.swift`.
 
 ## Localization
