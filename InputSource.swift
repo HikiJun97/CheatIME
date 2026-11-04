@@ -44,6 +44,25 @@ func enabledInputSources() -> [InputSourceInfo] {
     }
 }
 
+final class InputSources: ObservableObject {
+    static let shared = InputSources()
+    @Published private(set) var languages = enabledLanguages()
+    @Published private(set) var sources = enabledInputSources()
+
+    private init() {
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name(kTISNotifyEnabledKeyboardInputSourcesChanged as String),
+            object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                let shared = InputSources.shared
+                shared.languages = enabledLanguages()
+                shared.sources = enabledInputSources()
+            }
+        }
+    }
+}
+
 func currentInputSourceID() -> String {
     property(TISCopyCurrentKeyboardInputSource().takeRetainedValue(), kTISPropertyInputSourceID) ?? ""
 }

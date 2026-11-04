@@ -199,7 +199,7 @@ struct StyleSections: View {
     @AppStorage private var borderWidth: Double
     @AppStorage private var borderColor: String
 
-    private let languages = enabledLanguages()
+    @ObservedObject private var inputs = InputSources.shared
 
     init(scope: String) {
         self.scope = scope
@@ -229,7 +229,7 @@ struct StyleSections: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     Divider()
-                    ForEach(languages, id: \.self) { lang in
+                    ForEach(inputs.languages, id: \.self) { lang in
                         LanguageRow(lang: lang, style: preview(""))
                     }
                 }
@@ -240,7 +240,7 @@ struct StyleSections: View {
                 HStack {
                     Text("미리보기")
                     Spacer()
-                    ForEach(languages, id: \.self) { preview($0) }
+                    ForEach(inputs.languages, id: \.self) { preview($0) }
                 }
             }
             Picker("모양", selection: $shape) {

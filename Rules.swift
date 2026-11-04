@@ -38,7 +38,8 @@ final class Switcher {
 struct RulesTab: View {
     @AppStorage(K.rules) private var rulesJSON = "[]"
 
-    private let sources = enabledInputSources()
+    @ObservedObject private var inputs = InputSources.shared
+    private var sources: [InputSourceInfo] { inputs.sources }
 
     var body: some View {
         let rules = decodeRules(rulesJSON)
