@@ -72,6 +72,7 @@ struct BadgeTab: View {
 }
 
 struct PositionTab: View {
+    @AppStorage(K.positionMode) private var positionMode = "fixed"
     @AppStorage(K.displayMode) private var displayMode = "all"
     @AppStorage(K.displays) private var displays = ""
     @AppStorage(K.hAlign) private var hAlign = "right"
@@ -84,36 +85,73 @@ struct PositionTab: View {
 
     var body: some View {
         Form {
-            Section("디스플레이") {
-                Picker("표시할 곳", selection: $displayMode) {
-                    Text("모든 디스플레이").tag("all")
-                    Text("마우스가 있는 디스플레이").tag("mouse")
-                    Text("직접 선택").tag("selected")
+            Section("위치 방식") {
+                Picker("위치 방식", selection: $positionMode) {
+                    Text("고정 위치").tag("fixed")
+                    Text("마우스 포인터 옆").tag("pointer")
+                    Text("텍스트 커서 옆").tag("caret")
                 }
-                if displayMode == "selected" {
-                    ForEach(screens, id: \.uuid) { screen in
-                        Toggle(screen.localizedName, isOn: chosen(screen.uuid))
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: positionMode) {
+                    if positionMode == "caret" { _ = accessibilityTrusted(prompt: true) }
+                }
+                if positionMode == "caret" {
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        if AXIsProcessTrusted() {
+                            Label("손쉬운 사용 권한이 허용되어 있습니다.", systemImage: "checkmark.circle")
+                                .foregroundStyle(.green)
+                        } else {
+                            HStack {
+                                Label("텍스트 커서 위치를 읽으려면 손쉬운 사용 권한이 필요합니다.",
+                                      systemImage: "exclamationmark.triangle")
+                                    .foregroundStyle(.orange)
+                                Spacer()
+                                Button("권한 설정 열기", action: openAccessibilitySettings)
+                            }
+                        }
                     }
+                    Text("텍스트 커서를 찾지 못하는 앱에서는 마우스 포인터 옆에 표시합니다.")
+                        .foregroundStyle(.secondary)
                 }
             }
-            Section("위치") {
-                Picker("가로", selection: $hAlign) {
-                    Text("왼쪽").tag("left")
-                    Text("가운데").tag("center")
-                    Text("오른쪽").tag("right")
-                }
-                .pickerStyle(.segmented)
-                Picker("세로", selection: $vAlign) {
-                    Text("위").tag("top")
-                    Text("가운데").tag("middle")
-                    Text("아래").tag("bottom")
-                }
-                .pickerStyle(.segmented)
-                NumberSlider(title: "가로 여백", value: $marginX, range: 0...maxMargin)
-                NumberSlider(title: "세로 여백", value: $marginY, range: 0...maxMargin)
+            if positionMode == "fixed" {
+                fixedSections
             }
         }
         .formStyle(.grouped)
+    }
+
+    @ViewBuilder
+    private var fixedSections: some View {
+        Section("디스플레이") {
+            Picker("표시할 곳", selection: $displayMode) {
+                Text("모든 디스플레이").tag("all")
+                Text("마우스가 있는 디스플레이").tag("mouse")
+                Text("직접 선택").tag("selected")
+            }
+            if displayMode == "selected" {
+                ForEach(screens, id: \.uuid) { screen in
+                    Toggle(screen.localizedName, isOn: chosen(screen.uuid))
+                }
+            }
+        }
+        Section("위치") {
+            Picker("가로", selection: $hAlign) {
+                Text("왼쪽").tag("left")
+                Text("가운데").tag("center")
+                Text("오른쪽").tag("right")
+            }
+            .pickerStyle(.segmented)
+            Picker("세로", selection: $vAlign) {
+                Text("위").tag("top")
+                Text("가운데").tag("middle")
+                Text("아래").tag("bottom")
+            }
+            .pickerStyle(.segmented)
+            NumberSlider(title: "가로 여백", value: $marginX, range: 0...maxMargin)
+            NumberSlider(title: "세로 여백", value: $marginY, range: 0...maxMargin)
+        }
     }
 
     private func chosen(_ uuid: String) -> Binding<Bool> {

@@ -2,6 +2,7 @@ import SwiftUI
 
 enum K {
     static let visible = "visible"
+    static let positionMode = "positionMode"
     static let displayMode = "displayMode"
     static let displays = "displays"
     static let shape = "shape"
@@ -25,7 +26,7 @@ enum K {
 
 func registerDefaults() {
     UserDefaults.standard.register(defaults: [
-        K.visible: true, K.displayMode: "all", K.displays: "", K.shape: "rounded",
+        K.visible: true, K.positionMode: "fixed", K.displayMode: "all", K.displays: "", K.shape: "rounded",
         K.fontSize: 15.0, K.opacity: 0.9, K.glass: false, K.sound: false, K.rules: "[]", K.appFilter: false, K.filterApps: "", K.soundName: "Tink",
         K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
     ])
