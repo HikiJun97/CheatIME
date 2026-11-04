@@ -173,7 +173,7 @@ struct NumberSlider: View {
 
     var body: some View {
         HStack {
-            Slider(value: $value, in: range, step: 1) { Text(title) }
+            Slider(value: Binding(get: { value }, set: { value = $0.rounded() }), in: range) { Text(title) }
             TextField(title, value: Binding(get: { value.rounded() },
                                             set: { value = min(max($0, range.lowerBound), range.upperBound) }),
                       format: .number.grouping(.never).precision(.fractionLength(0)))

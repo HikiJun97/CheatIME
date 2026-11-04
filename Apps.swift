@@ -67,29 +67,37 @@ struct AppsTab: View {
         let matches = apps.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         let on = matches.filter { chosen.contains($0.id) }
         let off = matches.filter { !chosen.contains($0.id) }
-        Form {
-            Section {
-                Toggle("선택한 앱이 앞에 있을 때만 뱃지 표시", isOn: $appFilter)
-                TextField("앱 검색", text: $search.value)
-                    .roundedInputBorder()
-            }
-            Section("선택한 앱 (\(on.count))") {
-                if on.isEmpty {
-                    Text("체크한 앱이 여기에 표시됩니다.").foregroundStyle(.secondary)
-                }
-                ForEach(on) { app in
-                    Toggle(isOn: binding(app.id)) { AppLabel(app: app) }.toggleStyle(.checkbox)
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    Toggle("선택한 앱이 앞에 있을 때만 뱃지 표시", isOn: $appFilter)
+                    TextField("앱 검색", text: $search.value)
+                        .roundedInputBorder()
                 }
             }
-            .disabled(!appFilter)
-            Section("다른 앱 (\(off.count))") {
-                ForEach(off) { app in
-                    Toggle(isOn: binding(app.id)) { AppLabel(app: app) }.toggleStyle(.checkbox)
+            .formStyle(.grouped)
+            .scrollDisabled(true)
+            .fixedSize(horizontal: false, vertical: true)
+            List {
+                Section("선택한 앱 (\(on.count))") {
+                    if on.isEmpty {
+                        Text("체크한 앱이 여기에 표시됩니다.").foregroundStyle(.secondary)
+                    }
+                    ForEach(on) { app in
+                        Toggle(isOn: binding(app.id)) { AppLabel(app: app) }.toggleStyle(.checkbox)
+                    }
+                }
+                Section("다른 앱 (\(off.count))") {
+                    ForEach(off) { app in
+                        Toggle(isOn: binding(app.id)) { AppLabel(app: app) }.toggleStyle(.checkbox)
+                    }
                 }
             }
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+            .padding(.horizontal, 10)
             .disabled(!appFilter)
         }
-        .formStyle(.grouped)
     }
 
     private func binding(_ id: String) -> Binding<Bool> {
