@@ -29,7 +29,7 @@ jobs:
         run: make dist
 
       - name: Sign the update and write the appcast
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event.pull_request.head.repo.full_name == github.repository
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
