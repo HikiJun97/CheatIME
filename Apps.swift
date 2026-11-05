@@ -1,21 +1,19 @@
 import SwiftUI
 
-struct AppInfo: Identifiable, Hashable {
+nonisolated struct AppInfo: Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let path: String
 }
 
-func installedApps() -> [AppInfo] {
+nonisolated func installedApps(running: [String]) -> [AppInfo] {
     let fm = FileManager.default
     let dirs = ["/Applications", "/Applications/Utilities", "/System/Applications", "/System/Applications/Utilities",
                 fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path]
     var paths = dirs.flatMap { dir in
         ((try? fm.contentsOfDirectory(atPath: dir)) ?? []).filter { $0.hasSuffix(".app") && !$0.hasPrefix(".") }.map { "\(dir)/\($0)" }
     }
-    paths += NSWorkspace.shared.runningApplications
-        .filter { $0.activationPolicy == .regular }
-        .compactMap { $0.bundleURL?.path }
+    paths += running
     var seen = Set<String>()
     var apps: [AppInfo] = []
     for path in paths {
@@ -26,7 +24,7 @@ func installedApps() -> [AppInfo] {
     return apps.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 }
 
-func appInfo(at url: URL) -> AppInfo? {
+nonisolated func appInfo(at url: URL) -> AppInfo? {
     guard let id = Bundle(url: url)?.bundleIdentifier else { return nil }
     var name = FileManager.default.displayName(atPath: url.path)
     if name.hasSuffix(".app") { name = String(name.dropLast(4)) }
@@ -50,6 +48,28 @@ struct AppLabel: View {
     }
 }
 
+final class AppList: ObservableObject {
+    static let shared = AppList()
+    @Published private(set) var apps: [AppInfo] = []
+    private var scanning = false
+
+    func refresh() {
+        guard !scanning else { return }
+        scanning = true
+        let running = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap { $0.bundleURL?.path }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let apps = installedApps(running: running)
+            Task { @MainActor in
+                let list = AppList.shared
+                list.scanning = false
+                if list.apps != apps { list.apps = apps }
+            }
+        }
+    }
+}
+
 final class SearchText: ObservableObject {
     @Published var value = ""
 }
@@ -58,10 +78,10 @@ struct AppsTab: View {
     @AppStorage(K.appFilter) private var appFilter = false
     @AppStorage(K.filterApps) private var filterApps = ""
     @StateObject private var search = SearchText()
-
-    private let apps = installedApps()
+    @ObservedObject private var list = AppList.shared
 
     var body: some View {
+        let apps = list.apps
         let chosen = Set(filterApps.split(separator: ",").map(String.init))
         let query = search.value
         let matches = apps.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
@@ -98,6 +118,7 @@ struct AppsTab: View {
             .padding(.horizontal, 10)
             .disabled(!appFilter)
         }
+        .onAppear { list.refresh() }
     }
 
     private func binding(_ id: String) -> Binding<Bool> {

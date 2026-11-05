@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         _ = InputSources.shared
         _ = Updates.shared
+        AppList.shared.refresh()
         menu.addItem(withTitle: NSLocalizedString("설정…", comment: ""),
                      action: #selector(openSettings), keyEquivalent: ",").target = self
         showItem = menu.addItem(withTitle: NSLocalizedString("뱃지 표시", comment: ""),
