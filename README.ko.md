@@ -21,6 +21,7 @@
 - 고른 앱에서만 뱃지를 띄울 수 있습니다.
 - 어떤 앱이 앞으로 나오면 정해 둔 입력기로 자동으로 바꿉니다.
 - 입력기가 바뀔 때 소리로 알려 주고, 로그인할 때 자동으로 실행할 수 있습니다.
+- 앱 안에서 업데이트할 수 있습니다. 자동으로 확인할지는 두 번째 실행 때 묻습니다.
 
 <p align="center"><img src="docs/settings-ko.png" width="560" alt="뱃지 설정"></p>
 <p align="center"><img src="docs/rules-ko.png" width="560" alt="자동 전환 규칙"></p>
@@ -40,7 +41,7 @@ macOS 15 이상, Apple Silicon 또는 Intel Mac
 
 ## 사용법
 
-- **메뉴 막대 아이콘**: 설정…(⌘,), 뱃지 표시, CheatIME 종료
+- **메뉴 막대 아이콘**: 설정…(⌘,), 뱃지 표시, 업데이트 확인…, CheatIME 종료
 - **뱃지**: 클릭하면 숨기고, 끌면 옮기고, 우클릭하면 메뉴를 엽니다.
 - 메뉴 막대 아이콘이 보이지 않으면 Spotlight나 Finder에서 CheatIME를 한 번 더 실행합니다. 그러면 설정 창이 열립니다.
 
@@ -48,7 +49,7 @@ macOS 15 이상, Apple Silicon 또는 Intel Mac
 
 ## 소스에서 빌드
 
-macOS 27 SDK(Xcode 또는 Command Line Tools)가 필요합니다.
+macOS 27 SDK(Xcode 또는 Command Line Tools)가 필요합니다. 처음 빌드할 때 Sparkle 프레임워크를 내려받습니다.
 
 ```sh
 git clone https://github.com/HikiJun97/CheatIME.git
@@ -68,7 +69,7 @@ defaults delete io.github.hikijun97.cheatime
 
 ## 개인정보
 
-CheatIME는 키 입력을 읽지 않고 네트워크에 연결하지 않습니다. 손쉬운 사용 권한은 텍스트 커서 위치를 찾는 데만 씁니다.
+CheatIME는 키 입력을 읽지 않습니다. 업데이트를 확인할 때만 GitHub에 접속하며, 설정 → 일반에서 끌 수 있습니다. 손쉬운 사용 권한은 텍스트 커서 위치를 찾는 데만 씁니다.
 
 ## 영감을 준 프로젝트
 
@@ -78,3 +79,5 @@ CheatIME는 키 입력을 읽지 않고 네트워크에 연결하지 않습니�
 ## 라이선스
 
 [MIT](LICENSE)
+
+업데이트에는 [Sparkle](https://sparkle-project.org)을 쓰며, Sparkle의 라이선스는 앱에 함께 들어 있습니다.

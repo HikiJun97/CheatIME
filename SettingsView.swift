@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct SettingsView: View {
@@ -338,6 +339,22 @@ struct CaretSection: View {
     }
 }
 
+final class ScreenList: ObservableObject {
+    @Published private(set) var screens = NSScreen.screens
+    private var subscription: AnyCancellable?
+
+    init() {
+        subscription = NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.screens = NSScreen.screens }
+            }
+    }
+
+    var maxMarginX: Double { (screens.map(\.visibleFrame.width).max() ?? 800) / 2 }
+    var maxMarginY: Double { (screens.map(\.visibleFrame.height).max() ?? 600) / 2 }
+}
+
 struct FixedSections: View {
     @AppStorage(K.displayMode) private var displayMode = "all"
     @AppStorage(K.displays) private var displays = ""
@@ -346,8 +363,7 @@ struct FixedSections: View {
     @AppStorage(K.marginX) private var marginX = 12.0
     @AppStorage(K.marginY) private var marginY = 12.0
 
-    private let screens = NSScreen.screens
-    private let maxMargin = (NSScreen.screens.map { max($0.visibleFrame.width, $0.visibleFrame.height) }.max() ?? 800) / 2
+    @StateObject private var screenList = ScreenList()
 
     var body: some View {
         Section("디스플레이") {
@@ -357,7 +373,7 @@ struct FixedSections: View {
                 Text("직접 선택").tag("selected")
             }
             if displayMode == "selected" {
-                ForEach(screens, id: \.uuid) { screen in
+                ForEach(screenList.screens, id: \.uuid) { screen in
                     Toggle(screen.localizedName, isOn: chosen(screen.uuid))
                 }
             }
@@ -375,8 +391,8 @@ struct FixedSections: View {
                 Text("아래").tag("bottom")
             }
             .pickerStyle(.segmented)
-            NumberSlider(title: "가로 여백", value: $marginX, range: 0...maxMargin)
-            NumberSlider(title: "세로 여백", value: $marginY, range: 0...maxMargin)
+            NumberSlider(title: "가로 여백", value: $marginX, range: 0...screenList.maxMarginX)
+            NumberSlider(title: "세로 여백", value: $marginY, range: 0...screenList.maxMarginY)
         }
     }
 

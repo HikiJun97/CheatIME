@@ -87,3 +87,6 @@
 "위로 이동" = "Move Up";
 "아래로 이동" = "Move Down";
 "목록에서 제거" = "Remove from List";
+"업데이트 확인…" = "Check for Updates…";
+"자동으로 업데이트 확인" = "Automatically check for updates";
+"새 버전 %@ 설치…" = "Install Version %@…";

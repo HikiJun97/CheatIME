@@ -131,6 +131,10 @@ final class Overlay {
     private var caretFallback = true
     private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
+    private var caretQueryRunning = false
+    private var caretTimer: Timer?
+    private var caretGeneration = 0
+    private var caretFlash: (id: Int, seconds: Double)?
     private var flashing: Set<String> = []
     private var flashIDs: [String: Int] = [:]
 
@@ -167,8 +171,20 @@ final class Overlay {
         }
 
         caretFallback = d.bool(forKey: K.caretFallback)
+        caretGeneration += 1
         caretSize = shows("caret") ? place(BadgeView(lang: lang, scope: styleScope("caret")), in: caretPanel) : nil
-        if caretSize == nil { caretPanel.orderOut(nil) } else { caretTick() }
+        if caretSize == nil {
+            caretPanel.orderOut(nil)
+            caretTimer?.invalidate()
+            caretTimer = nil
+        } else {
+            if caretTimer == nil {
+                caretTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.caretTick() }
+                }
+            }
+            caretTick()
+        }
     }
 
     func flash() {
@@ -179,7 +195,12 @@ final class Overlay {
             flashIDs[mode] = id
             flashing.insert(mode)
             let seconds = d.double(forKey: K.style(styleScope(mode), K.flashDuration)) / 1000
-            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.fadeOut(mode, id) }
+            if mode == "caret" && !caretPanel.isVisible {
+                caretFlash = (id, seconds)
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 1) { [weak self] in self?.fadeOut(mode, id) }
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.fadeOut(mode, id) }
+            }
         }
         update()
         modes.flatMap(panels).forEach { $0.alphaValue = 1 }
@@ -215,8 +236,23 @@ final class Overlay {
     }
 
     func caretTick() {
+        guard caretSize != nil, !caretQueryRunning else { return }
+        caretQueryRunning = true
+        let generation = caretGeneration
+        DispatchQueue.global(qos: .userInteractive).async {
+            let bounds = focusedCaretBounds()
+            Task { @MainActor in self.showCaret(at: bounds, generation: generation) }
+        }
+    }
+
+    private func showCaret(at bounds: CGRect?, generation: Int) {
+        caretQueryRunning = false
+        guard generation == caretGeneration else {
+            caretTick()
+            return
+        }
         guard let size = caretSize else { return }
-        if let caret = caretRect() {
+        if let bounds, let caret = caretRect(from: bounds) {
             let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
             put(caretPanel, at: clamped(p, size: size, near: caret.origin), size: size)
         } else if pointerSize != nil || !caretFallback {
@@ -225,7 +261,13 @@ final class Overlay {
         } else {
             put(caretPanel, at: pointerOrigin(for: size), size: size)
         }
-        if !caretPanel.isVisible { caretPanel.orderFrontRegardless() }
+        if !caretPanel.isVisible {
+            caretPanel.orderFrontRegardless()
+            if let flash = caretFlash {
+                caretFlash = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + flash.seconds) { [weak self] in self?.fadeOut("caret", flash.id) }
+            }
+        }
     }
 
     private func place(_ badge: BadgeView, in panel: NSPanel) -> NSSize {
@@ -247,7 +289,8 @@ final class Overlay {
     }
 
     private func clamped(_ p: NSPoint, size: NSSize, near anchor: NSPoint) -> NSPoint {
-        let screen = NSScreen.screens.first { NSMouseInRect(anchor, $0.frame, false) } ?? NSScreen.screens[0]
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(anchor, $0.frame, false) }) ?? NSScreen.screens.first
+        else { return p }
         let v = screen.visibleFrame
         return NSPoint(x: min(max(p.x, v.minX), v.maxX - size.width), y: min(max(p.y, v.minY), v.maxY - size.height))
     }
@@ -261,20 +304,20 @@ final class Overlay {
         }
     }
 
-    private func screenUnderMouse() -> NSScreen {
+    private func screenUnderMouse() -> NSScreen? {
         let p = NSEvent.mouseLocation
-        return NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens[0]
+        return NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens.first
     }
 
     private func targetScreens() -> [NSScreen] {
         let d = UserDefaults.standard
         switch d.string(forKey: K.displayMode) {
         case "mouse":
-            return [screenUnderMouse()]
+            return screenUnderMouse().map { [$0] } ?? []
         case "selected":
             let ids = (d.string(forKey: K.displays) ?? "").split(separator: ",").map(String.init)
             let chosen = NSScreen.screens.filter { ids.contains($0.uuid) }
-            return chosen.isEmpty ? [NSScreen.screens[0]] : chosen
+            return chosen.isEmpty ? Array(NSScreen.screens.prefix(1)) : chosen
         default:
             return NSScreen.screens
         }
@@ -294,7 +337,8 @@ final class Overlay {
         case "middle": f.midY - size.height / 2
         default: f.minY + my
         }
-        return NSRect(origin: NSPoint(x: x, y: y), size: size)
+        let origin = NSPoint(x: min(max(x, f.minX), f.maxX - size.width), y: min(max(y, f.minY), f.maxY - size.height))
+        return NSRect(origin: origin, size: size)
     }
 
     private func savePosition(of panel: NSPanel) {

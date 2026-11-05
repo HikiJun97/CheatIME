@@ -1,5 +1,6 @@
 import Cocoa
 import Carbon
+import Combine
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -8,28 +9,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let menu = NSMenu()
     var statusItem: NSStatusItem!
     var showItem: NSMenuItem!
+    var updateItem: NSMenuItem!
+    var updateSubscription: AnyCancellable?
     var settingsWindow: NSWindow?
-    var lastLanguage: String?
+    var lastSourceID: String?
+    var refreshScheduled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppLanguage.captureLaunchLanguage()
         _ = InputSources.shared
+        _ = Updates.shared
+        AppList.shared.refresh()
         menu.addItem(withTitle: NSLocalizedString("설정…", comment: ""),
                      action: #selector(openSettings), keyEquivalent: ",").target = self
         showItem = menu.addItem(withTitle: NSLocalizedString("뱃지 표시", comment: ""),
                                 action: #selector(toggleBadge), keyEquivalent: "")
         showItem.target = self
+        updateItem = menu.addItem(withTitle: NSLocalizedString("업데이트 확인…", comment: ""),
+                                  action: #selector(checkForUpdates), keyEquivalent: "")
+        updateItem.target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: NSLocalizedString("CheatIME 종료", comment: ""),
                      action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let icon = NSImage(named: "CheatIMETemplate")
-        icon?.isTemplate = true
-        icon?.size = NSSize(width: 18, height: 18)
-        statusItem.button?.image = icon
+        statusItem.button?.image = statusIcon(badge: false)
         statusItem.button?.setAccessibilityLabel("CheatIME")
         statusItem.menu = menu
         overlay.contextMenu = menu
+        updateSubscription = Updates.shared.$pendingVersion.sink { [weak self] version in
+            MainActor.assumeIsolated { self?.showPendingUpdate(version) }
+        }
 
         let onChange: @Sendable (Notification) -> Void = { [weak self] _ in
             MainActor.assumeIsolated { self?.refresh() }
@@ -49,7 +59,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: onChange)
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleRefresh() }
+        }
         let moves: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
         NSEvent.addGlobalMonitorForEvents(matching: moves) { [overlay] _ in
             MainActor.assumeIsolated { overlay.mouseMoved() }
@@ -58,21 +71,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { overlay.mouseMoved() }
             return event
         }
-        Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [overlay] _ in
-            MainActor.assumeIsolated { overlay.caretTick() }
-        }
 
         refresh()
     }
 
+    func showPendingUpdate(_ version: String?) {
+        updateItem.title = version.map { String(format: NSLocalizedString("새 버전 %@ 설치…", comment: ""), $0) }
+            ?? NSLocalizedString("업데이트 확인…", comment: "")
+        statusItem.button?.image = statusIcon(badge: version != nil)
+    }
+
+    func statusIcon(badge: Bool) -> NSImage? {
+        guard let base = NSImage(named: "CheatIMETemplate") else { return nil }
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
+            base.draw(in: rect)
+            if badge {
+                NSGraphicsContext.current?.compositingOperation = .clear
+                NSBezierPath(ovalIn: NSRect(x: 10.5, y: 10.5, width: 8, height: 8)).fill()
+                NSGraphicsContext.current?.compositingOperation = .sourceOver
+                NSColor.black.setFill()
+                NSBezierPath(ovalIn: NSRect(x: 12, y: 12, width: 5, height: 5)).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    func scheduleRefresh() {
+        guard !refreshScheduled else { return }
+        refreshScheduled = true
+        Task { @MainActor in
+            refreshScheduled = false
+            refresh()
+        }
+    }
+
     func refresh() {
-        let lang = currentLanguage()
+        let source = currentInputSourceID()
         let d = UserDefaults.standard
-        let changed = lastLanguage != nil && lastLanguage != lang
+        let changed = lastSourceID != nil && lastSourceID != source
         if changed, d.bool(forKey: K.sound) {
             NSSound(named: d.string(forKey: K.soundName) ?? "Tink")?.play()
         }
-        lastLanguage = lang
+        lastSourceID = source
         if changed { overlay.flash() } else { overlay.update() }
         showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
     }
@@ -85,6 +127,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleBadge() {
         let d = UserDefaults.standard
         d.set(!d.bool(forKey: K.visible), forKey: K.visible)
+    }
+
+    @objc func checkForUpdates() {
+        Updates.shared.check()
     }
 
     @objc func openSettings() {

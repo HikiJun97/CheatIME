@@ -21,6 +21,7 @@
 - 可以只在你选择的应用中显示
 - 某个应用来到前台时，自动切换到指定的输入法
 - 切换时可播放提示音，并支持登录时自动打开
+- 可在应用内更新，第二次启动时会询问是否自动检查更新
 
 界面提供英文、韩文和日文（暂无中文界面），下文的设置项名称以英文界面为准。
 
@@ -42,7 +43,7 @@ macOS 15 及以上，Apple 芯片或 Intel 芯片的 Mac
 
 ## 使用方法
 
-- **菜单栏图标**：Settings…（⌘,）、Show Badge、Quit CheatIME
+- **菜单栏图标**：Settings…（⌘,）、Show Badge、Check for Updates…、Quit CheatIME
 - **徽标**：点按隐藏，拖动调整位置，右键点按打开菜单
 - 看不到菜单栏图标时，从 Spotlight 或访达再次打开 CheatIME，就会弹出 Settings 窗口。
 
@@ -50,7 +51,7 @@ macOS 15 及以上，Apple 芯片或 Intel 芯片的 Mac
 
 ## 从源码构建
 
-需要 macOS 27 SDK（Xcode 或 Command Line Tools）。
+需要 macOS 27 SDK（Xcode 或 Command Line Tools）。首次构建时会下载 Sparkle 框架。
 
 ```sh
 git clone https://github.com/HikiJun97/CheatIME.git
@@ -70,7 +71,7 @@ defaults delete io.github.hikijun97.cheatime
 
 ## 隐私
 
-CheatIME 不读取键盘输入，也不联网。辅助功能权限仅用于查找文本光标的位置。
+CheatIME 不读取键盘输入，只在检查更新时连接 GitHub，可在 Settings → General 中关闭。辅助功能权限仅用于查找文本光标的位置。
 
 ## 灵感来源
 
@@ -80,3 +81,5 @@ CheatIME 不读取键盘输入，也不联网。辅助功能权限仅用于查�
 ## 许可证
 
 [MIT](LICENSE)
+
+更新功能使用 [Sparkle](https://sparkle-project.org)，其许可证随应用一同提供。

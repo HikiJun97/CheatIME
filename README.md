@@ -21,6 +21,7 @@ Ever pressed a shortcut in the terminal or Vim, only to find the input source wa
 - Show it only in the apps you choose
 - Switch to a chosen input source automatically when an app comes to the front
 - Optional sound on change, and Open at login
+- Updates itself from within the app; it asks on the second launch whether to check automatically
 
 <p align="center"><img src="docs/settings-en.png" width="560" alt="Badge settings"></p>
 <p align="center"><img src="docs/rules-en.png" width="560" alt="Auto-switch rules"></p>
@@ -40,7 +41,7 @@ macOS 15 or later, Apple silicon or Intel.
 
 ## Usage
 
-- **Menu bar icon**: Settings… (⌘,), Show Badge, Quit CheatIME
+- **Menu bar icon**: Settings… (⌘,), Show Badge, Check for Updates…, Quit CheatIME
 - **Badge**: click to hide, drag to move, right-click for the menu
 - Can't see the menu bar icon? Open CheatIME again from Spotlight or Finder to bring up Settings.
 
@@ -48,7 +49,7 @@ macOS 15 or later, Apple silicon or Intel.
 
 ## Build from source
 
-Requires the macOS 27 SDK (Xcode or the Command Line Tools).
+Requires the macOS 27 SDK (Xcode or the Command Line Tools). The first build downloads the Sparkle framework.
 
 ```sh
 git clone https://github.com/HikiJun97/CheatIME.git
@@ -68,7 +69,7 @@ defaults delete io.github.hikijun97.cheatime
 
 ## Privacy
 
-CheatIME doesn't read your keystrokes or connect to the network. Accessibility access is used only to find the text cursor.
+CheatIME doesn't read your keystrokes. It connects to GitHub only to check for updates, which you can turn off in Settings → General. Accessibility access is used only to find the text cursor.
 
 ## Inspired by
 
@@ -78,3 +79,5 @@ CheatIME doesn't read your keystrokes or connect to the network. Accessibility a
 ## License
 
 [MIT](LICENSE)
+
+Updates use [Sparkle](https://sparkle-project.org); its license is included in the app.
