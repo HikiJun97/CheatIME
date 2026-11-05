@@ -28,13 +28,13 @@ jobs:
           version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Info.plist)
           test "v$version" = "$GITHUB_REF_NAME"
           build=$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' Info.plist)
-          previous=$(git tag -l 'v*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n 1)
-          if [ -n "$previous" ]; then
-            git show "$previous:Info.plist" > "$RUNNER_TEMP/previous.plist"
-            previous_build=$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$RUNNER_TEMP/previous.plist")
-            echo "CFBundleVersion $build, $previous has $previous_build"
-            test "$build" -gt "$previous_build"
-          fi
+          highest=0
+          for tag in $(git tag -l 'v*' | grep -vx "$GITHUB_REF_NAME"); do
+            tag_build=$(git show "$tag:Info.plist" | plutil -extract CFBundleVersion raw -o - -)
+            if [ "$tag_build" -gt "$highest" ]; then highest=$tag_build; fi
+          done
+          echo "CFBundleVersion $build, highest in other v* tags $highest"
+          test "$build" -gt "$highest"
 
       - name: Build DMG and ZIP
         run: make dist

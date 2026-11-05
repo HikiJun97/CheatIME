@@ -21,7 +21,7 @@ Ever pressed a shortcut in the terminal or Vim, only to find the input source wa
 - Show it only in the apps you choose
 - Switch to a chosen input source automatically when an app comes to the front
 - Optional sound on change, and Open at login
-- Updates itself from within the app; automatic checks can be turned off
+- Updates itself from within the app; it asks on the second launch whether to check automatically
 
 <p align="center"><img src="docs/settings-en.png" width="560" alt="Badge settings"></p>
 <p align="center"><img src="docs/rules-en.png" width="560" alt="Auto-switch rules"></p>
