@@ -6,6 +6,7 @@ BUILD := build
 REPO_URL := https://github.com/HikiJun97/CheatIME
 SIGN_CERT := 8D85E80B49FD98E92BAB1F33CEBC09BAD8034F10
 SIGN_IDENTITY ?= $(if $(shell security find-identity -p codesigning | grep $(SIGN_CERT)),$(SIGN_CERT),-)
+SIGN = codesign --force --sign "$(SIGN_IDENTITY)" $(if $(SIGN_KEYCHAIN),--keychain "$(SIGN_KEYCHAIN)") $(APP)
 
 SPARKLE_VERSION := 2.10.1
 SPARKLE_SHA256 := 1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27
@@ -31,7 +32,7 @@ $(APP): *.swift Info.plist *.lproj/* Resources/* $(SPARKLE)/Sparkle.framework
 	cp -R *.lproj Resources/* $(APP)/Contents/Resources/
 	ditto $(SPARKLE)/Sparkle.framework $(APP)/Contents/Frameworks/Sparkle.framework
 	cp $(SPARKLE)/LICENSE $(APP)/Contents/Resources/Sparkle-LICENSE
-	codesign --force --sign "$(SIGN_IDENTITY)" $(if $(SIGN_KEYCHAIN),--keychain "$(SIGN_KEYCHAIN)") $(APP)
+	$(SIGN)
 
 DIST := dist
 
@@ -58,6 +59,7 @@ appcast:
 	cp $(BUILD)/appcast/appcast.xml $(DIST)/appcast.xml
 
 install: $(APP)
+	$(SIGN)
 	-pkill -x CheatIME
 	rm -rf /Applications/$(APP)
 	cp -R $(APP) /Applications/
