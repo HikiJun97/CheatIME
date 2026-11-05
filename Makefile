@@ -4,7 +4,8 @@ VERSION := $(shell /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString'
 SWIFTFLAGS := -O -swift-version 6 -default-isolation MainActor
 BUILD := build
 REPO_URL := https://github.com/HikiJun97/CheatIME
-SIGN_IDENTITY ?= -
+SIGN_CERT := 8D85E80B49FD98E92BAB1F33CEBC09BAD8034F10
+SIGN_IDENTITY ?= $(if $(shell security find-identity -p codesigning | grep $(SIGN_CERT)),$(SIGN_CERT),-)
 
 SPARKLE_VERSION := 2.10.1
 SPARKLE_SHA256 := 1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27

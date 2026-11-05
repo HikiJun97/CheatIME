@@ -52,7 +52,7 @@ jobs:
           security import "$RUNNER_TEMP/signing.p12" -k "$keychain" -P "$SIGNING_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
           rm "$RUNNER_TEMP/signing.p12"
-          echo "SIGN_IDENTITY=8D85E80B49FD98E92BAB1F33CEBC09BAD8034F10" >> "$GITHUB_ENV"
+          echo "SIGN_IDENTITY=$(sed -n 's/^SIGN_CERT := //p' Makefile)" >> "$GITHUB_ENV"
           echo "SIGN_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
       - name: Build DMG and ZIP
