@@ -41,8 +41,12 @@ final class AppLanguage: ObservableObject {
     var changed: Bool { selection != Self.initial }
 
     init() {
-        _ = Self.initial
+        Self.captureLaunchLanguage()
         selection = Self.savedLanguage()
+    }
+
+    static func captureLaunchLanguage() {
+        _ = initial
     }
 
     private static func savedLanguage() -> String {

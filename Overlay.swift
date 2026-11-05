@@ -133,6 +133,8 @@ final class Overlay {
     private var lastMouseScreen: NSScreen?
     private var caretQueryRunning = false
     private var caretTimer: Timer?
+    private var caretGeneration = 0
+    private var caretFlash: (id: Int, seconds: Double)?
     private var flashing: Set<String> = []
     private var flashIDs: [String: Int] = [:]
 
@@ -169,6 +171,7 @@ final class Overlay {
         }
 
         caretFallback = d.bool(forKey: K.caretFallback)
+        caretGeneration += 1
         caretSize = shows("caret") ? place(BadgeView(lang: lang, scope: styleScope("caret")), in: caretPanel) : nil
         if caretSize == nil {
             caretPanel.orderOut(nil)
@@ -192,7 +195,12 @@ final class Overlay {
             flashIDs[mode] = id
             flashing.insert(mode)
             let seconds = d.double(forKey: K.style(styleScope(mode), K.flashDuration)) / 1000
-            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.fadeOut(mode, id) }
+            if mode == "caret" && !caretPanel.isVisible {
+                caretFlash = (id, seconds)
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 1) { [weak self] in self?.fadeOut(mode, id) }
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.fadeOut(mode, id) }
+            }
         }
         update()
         modes.flatMap(panels).forEach { $0.alphaValue = 1 }
@@ -230,14 +238,19 @@ final class Overlay {
     func caretTick() {
         guard caretSize != nil, !caretQueryRunning else { return }
         caretQueryRunning = true
+        let generation = caretGeneration
         DispatchQueue.global(qos: .userInteractive).async {
             let bounds = focusedCaretBounds()
-            Task { @MainActor in self.showCaret(at: bounds) }
+            Task { @MainActor in self.showCaret(at: bounds, generation: generation) }
         }
     }
 
-    private func showCaret(at bounds: CGRect?) {
+    private func showCaret(at bounds: CGRect?, generation: Int) {
         caretQueryRunning = false
+        guard generation == caretGeneration else {
+            caretTick()
+            return
+        }
         guard let size = caretSize else { return }
         if let bounds, let caret = caretRect(from: bounds) {
             let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
@@ -248,7 +261,13 @@ final class Overlay {
         } else {
             put(caretPanel, at: pointerOrigin(for: size), size: size)
         }
-        if !caretPanel.isVisible { caretPanel.orderFrontRegardless() }
+        if !caretPanel.isVisible {
+            caretPanel.orderFrontRegardless()
+            if let flash = caretFlash {
+                caretFlash = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + flash.seconds) { [weak self] in self?.fadeOut("caret", flash.id) }
+            }
+        }
     }
 
     private func place(_ badge: BadgeView, in panel: NSPanel) -> NSSize {
