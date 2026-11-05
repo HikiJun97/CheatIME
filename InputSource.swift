@@ -19,7 +19,7 @@ struct InputSourceInfo: Hashable {
 }
 
 func enabledInputSources() -> [InputSourceInfo] {
-    let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as! [TISInputSource]
+    let list = TISCreateInputSourceList(nil, false)?.takeRetainedValue() as? [TISInputSource] ?? []
     return list.compactMap { src in
         let category: String? = property(src, kTISPropertyInputSourceCategory)
         let selectable: Bool = property(src, kTISPropertyInputSourceIsSelectCapable) ?? false
@@ -83,8 +83,9 @@ func currentInputSourceID() -> String {
 func selectInputSource(_ id: String) {
     guard id != currentInputSourceID() else { return }
     let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
-    let list = TISCreateInputSourceList(filter, false).takeRetainedValue() as! [TISInputSource]
-    if let src = list.first { TISSelectInputSource(src) }
+    guard let list = TISCreateInputSourceList(filter, false)?.takeRetainedValue() as? [TISInputSource],
+          let src = list.first else { return }
+    TISSelectInputSource(src)
 }
 
 extension NSScreen {

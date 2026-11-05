@@ -131,6 +131,7 @@ final class Overlay {
     private var caretFallback = true
     private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
+    private var caretQueryRunning = false
     private var flashing: Set<String> = []
     private var flashIDs: [String: Int] = [:]
 
@@ -215,8 +216,18 @@ final class Overlay {
     }
 
     func caretTick() {
+        guard caretSize != nil, !caretQueryRunning else { return }
+        caretQueryRunning = true
+        DispatchQueue.global(qos: .userInteractive).async {
+            let bounds = focusedCaretBounds()
+            Task { @MainActor in self.showCaret(at: bounds) }
+        }
+    }
+
+    private func showCaret(at bounds: CGRect?) {
+        caretQueryRunning = false
         guard let size = caretSize else { return }
-        if let caret = caretRect() {
+        if let bounds, let caret = caretRect(from: bounds) {
             let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
             put(caretPanel, at: clamped(p, size: size, near: caret.origin), size: size)
         } else if pointerSize != nil || !caretFallback {
@@ -247,7 +258,8 @@ final class Overlay {
     }
 
     private func clamped(_ p: NSPoint, size: NSSize, near anchor: NSPoint) -> NSPoint {
-        let screen = NSScreen.screens.first { NSMouseInRect(anchor, $0.frame, false) } ?? NSScreen.screens[0]
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(anchor, $0.frame, false) }) ?? NSScreen.screens.first
+        else { return p }
         let v = screen.visibleFrame
         return NSPoint(x: min(max(p.x, v.minX), v.maxX - size.width), y: min(max(p.y, v.minY), v.maxY - size.height))
     }
@@ -261,20 +273,20 @@ final class Overlay {
         }
     }
 
-    private func screenUnderMouse() -> NSScreen {
+    private func screenUnderMouse() -> NSScreen? {
         let p = NSEvent.mouseLocation
-        return NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens[0]
+        return NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens.first
     }
 
     private func targetScreens() -> [NSScreen] {
         let d = UserDefaults.standard
         switch d.string(forKey: K.displayMode) {
         case "mouse":
-            return [screenUnderMouse()]
+            return screenUnderMouse().map { [$0] } ?? []
         case "selected":
             let ids = (d.string(forKey: K.displays) ?? "").split(separator: ",").map(String.init)
             let chosen = NSScreen.screens.filter { ids.contains($0.uuid) }
-            return chosen.isEmpty ? [NSScreen.screens[0]] : chosen
+            return chosen.isEmpty ? Array(NSScreen.screens.prefix(1)) : chosen
         default:
             return NSScreen.screens
         }
