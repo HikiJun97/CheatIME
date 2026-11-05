@@ -1,5 +1,6 @@
 import Cocoa
 import Carbon
+import Combine
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -8,11 +9,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let menu = NSMenu()
     var statusItem: NSStatusItem!
     var showItem: NSMenuItem!
+    var updateItem: NSMenuItem!
+    var updateSubscription: AnyCancellable?
     var settingsWindow: NSWindow?
     var lastSourceID: String?
     var refreshScheduled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppLanguage.captureLaunchLanguage()
         _ = InputSources.shared
         _ = Updates.shared
         AppList.shared.refresh()
@@ -21,20 +25,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showItem = menu.addItem(withTitle: NSLocalizedString("뱃지 표시", comment: ""),
                                 action: #selector(toggleBadge), keyEquivalent: "")
         showItem.target = self
-        menu.addItem(withTitle: NSLocalizedString("업데이트 확인…", comment: ""),
-                     action: #selector(checkForUpdates), keyEquivalent: "").target = self
+        updateItem = menu.addItem(withTitle: NSLocalizedString("업데이트 확인…", comment: ""),
+                                  action: #selector(checkForUpdates), keyEquivalent: "")
+        updateItem.target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: NSLocalizedString("CheatIME 종료", comment: ""),
                      action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let icon = NSImage(named: "CheatIMETemplate")
-        icon?.isTemplate = true
-        icon?.size = NSSize(width: 18, height: 18)
-        statusItem.button?.image = icon
+        statusItem.button?.image = statusIcon(badge: false)
         statusItem.button?.setAccessibilityLabel("CheatIME")
         statusItem.menu = menu
         overlay.contextMenu = menu
+        updateSubscription = Updates.shared.$pendingVersion.sink { [weak self] version in
+            MainActor.assumeIsolated { self?.showPendingUpdate(version) }
+        }
 
         let onChange: @Sendable (Notification) -> Void = { [weak self] _ in
             MainActor.assumeIsolated { self?.refresh() }
@@ -68,6 +73,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         refresh()
+    }
+
+    func showPendingUpdate(_ version: String?) {
+        updateItem.title = version.map { String(format: NSLocalizedString("새 버전 %@ 설치…", comment: ""), $0) }
+            ?? NSLocalizedString("업데이트 확인…", comment: "")
+        statusItem.button?.image = statusIcon(badge: version != nil)
+    }
+
+    func statusIcon(badge: Bool) -> NSImage? {
+        guard let base = NSImage(named: "CheatIMETemplate") else { return nil }
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
+            base.draw(in: rect)
+            if badge {
+                NSGraphicsContext.current?.compositingOperation = .clear
+                NSBezierPath(ovalIn: NSRect(x: 10.5, y: 10.5, width: 8, height: 8)).fill()
+                NSGraphicsContext.current?.compositingOperation = .sourceOver
+                NSColor.black.setFill()
+                NSBezierPath(ovalIn: NSRect(x: 12, y: 12, width: 5, height: 5)).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        return image
     }
 
     func scheduleRefresh() {

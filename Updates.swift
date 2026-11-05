@@ -5,6 +5,7 @@ final class Updates: NSObject, ObservableObject, SPUStandardUserDriverDelegate {
     static let shared = Updates()
     private var controller: SPUStandardUpdaterController!
     private var observation: NSKeyValueObservation?
+    @Published private(set) var pendingVersion: String?
 
     override init() {
         super.init()
@@ -25,9 +26,21 @@ final class Updates: NSObject, ObservableObject, SPUStandardUserDriverDelegate {
 
     var supportsGentleScheduledUpdateReminders: Bool { true }
 
+    func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {
+        immediateFocus
+    }
+
     func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
-        if handleShowingUpdate && !state.userInitiated {
-            NSApp.activate()
+        if !handleShowingUpdate && !state.userInitiated {
+            pendingVersion = update.displayVersionString
         }
+    }
+
+    func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
+        pendingVersion = nil
+    }
+
+    func standardUserDriverWillFinishUpdateSession() {
+        pendingVersion = nil
     }
 }
