@@ -36,7 +36,7 @@ There is no Xcode project. The `Makefile` calls `swiftc` directly.
 
 1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`.
 2. Merge into `main`, then push a tag that matches the version, for example `v1.2.0`.
-3. GitHub Actions (`.github/workflows/release.yml`, `xcode-27` runner) checks that the tag matches `Info.plist`, builds and signs the DMG, ZIP, and `SHA256SUMS.txt`, and creates a draft release using `.github/release-notes.md`.
+3. GitHub Actions (`.github/workflows/release.yml`, `xcode-27` runner) checks that the tag matches `Info.plist`, signs the app, builds the DMG, ZIP, and `SHA256SUMS.txt`, and creates a draft release using `.github/release-notes.md`.
 4. Fill in "What's new" on the draft and publish it.
 
 Builds are not notarized. Pull requests run the same build, ad-hoc signed, without creating a release.

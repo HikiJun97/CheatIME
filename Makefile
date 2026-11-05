@@ -37,6 +37,7 @@ $(APP): *.swift Info.plist *.lproj/* Resources/* $(SPARKLE)/Sparkle.framework
 DIST := dist
 
 dist: $(APP)
+	$(SIGN)
 	rm -rf $(DIST) $(BUILD)/dmg
 	mkdir -p $(DIST) $(BUILD)/dmg
 	ditto -c -k --keepParent $(APP) $(DIST)/CheatIME-$(VERSION).zip
