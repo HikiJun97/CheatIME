@@ -132,6 +132,7 @@ final class Overlay {
     private var fixedFollowsMouse = false
     private var lastMouseScreen: NSScreen?
     private var caretQueryRunning = false
+    private var caretTimer: Timer?
     private var flashing: Set<String> = []
     private var flashIDs: [String: Int] = [:]
 
@@ -169,7 +170,18 @@ final class Overlay {
 
         caretFallback = d.bool(forKey: K.caretFallback)
         caretSize = shows("caret") ? place(BadgeView(lang: lang, scope: styleScope("caret")), in: caretPanel) : nil
-        if caretSize == nil { caretPanel.orderOut(nil) } else { caretTick() }
+        if caretSize == nil {
+            caretPanel.orderOut(nil)
+            caretTimer?.invalidate()
+            caretTimer = nil
+        } else {
+            if caretTimer == nil {
+                caretTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.caretTick() }
+                }
+            }
+            caretTick()
+        }
     }
 
     func flash() {
@@ -306,7 +318,8 @@ final class Overlay {
         case "middle": f.midY - size.height / 2
         default: f.minY + my
         }
-        return NSRect(origin: NSPoint(x: x, y: y), size: size)
+        let origin = NSPoint(x: min(max(x, f.minX), f.maxX - size.width), y: min(max(y, f.minY), f.maxY - size.height))
+        return NSRect(origin: origin, size: size)
     }
 
     private func savePosition(of panel: NSPanel) {

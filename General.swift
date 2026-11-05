@@ -18,11 +18,16 @@ final class LoginItem: ObservableObject {
         }
         status = SMAppService.mainApp.status
     }
+
+    func refresh() {
+        status = SMAppService.mainApp.status
+    }
 }
 
 final class AppLanguage: ObservableObject {
     static let languages = ["en", "ko", "ja"]
-    private let initial: String
+    private static let initial = savedLanguage()
+    @Published var relaunchError: String?
     @Published var selection: String {
         didSet {
             if selection == "system" {
@@ -33,20 +38,31 @@ final class AppLanguage: ObservableObject {
         }
     }
 
-    var changed: Bool { selection != initial }
+    var changed: Bool { selection != Self.initial }
 
     init() {
+        _ = Self.initial
+        selection = Self.savedLanguage()
+    }
+
+    private static func savedLanguage() -> String {
         let saved = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName)?["AppleLanguages"]
         let first = (saved as? [String])?.first.map { String($0.prefix(2)) }
-        initial = first.flatMap { Self.languages.contains($0) ? $0 : nil } ?? "system"
-        selection = initial
+        return first.flatMap { languages.contains($0) ? $0 : nil } ?? "system"
     }
 
     func relaunch() {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
-            DispatchQueue.main.async { NSApp.terminate(nil) }
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
+            let message = error?.localizedDescription
+            Task { @MainActor in
+                if let message {
+                    self.relaunchError = message
+                } else {
+                    NSApp.terminate(nil)
+                }
+            }
         }
     }
 }
@@ -86,6 +102,9 @@ struct GeneralTab: View {
                         Spacer()
                         Button("다시 시작", action: language.relaunch)
                     }
+                    if let error = language.relaunchError {
+                        Text(error).foregroundStyle(.red)
+                    }
                 }
             }
             Section {
@@ -99,5 +118,8 @@ struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            login.refresh()
+        }
     }
 }

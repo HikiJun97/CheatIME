@@ -9,7 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var showItem: NSMenuItem!
     var settingsWindow: NSWindow?
-    var lastLanguage: String?
+    var lastSourceID: String?
+    var refreshScheduled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         _ = InputSources.shared
@@ -52,7 +53,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: onChange)
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleRefresh() }
+        }
         let moves: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
         NSEvent.addGlobalMonitorForEvents(matching: moves) { [overlay] _ in
             MainActor.assumeIsolated { overlay.mouseMoved() }
@@ -61,21 +65,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { overlay.mouseMoved() }
             return event
         }
-        Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [overlay] _ in
-            MainActor.assumeIsolated { overlay.caretTick() }
-        }
 
         refresh()
     }
 
+    func scheduleRefresh() {
+        guard !refreshScheduled else { return }
+        refreshScheduled = true
+        Task { @MainActor in
+            refreshScheduled = false
+            refresh()
+        }
+    }
+
     func refresh() {
-        let lang = currentLanguage()
+        let source = currentInputSourceID()
         let d = UserDefaults.standard
-        let changed = lastLanguage != nil && lastLanguage != lang
+        let changed = lastSourceID != nil && lastSourceID != source
         if changed, d.bool(forKey: K.sound) {
             NSSound(named: d.string(forKey: K.soundName) ?? "Tink")?.play()
         }
-        lastLanguage = lang
+        lastSourceID = source
         if changed { overlay.flash() } else { overlay.update() }
         showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
     }
