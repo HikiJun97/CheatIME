@@ -630,12 +630,12 @@ struct LanguageColumns<Name: View, Label: View, Bg: View, Fg: View, Hidden: View
     var body: some View {
         HStack(spacing: 16) {
             name.frame(maxWidth: .infinity, alignment: .leading)
-            label.frame(width: 56, alignment: .leading)
-            bg.frame(width: 44)
-            fg.frame(width: 44)
-            hidden.frame(width: 44)
-            preview.frame(width: 60, alignment: .trailing)
-            menu.frame(width: 20)
+            ZStack { label }.frame(width: 56, alignment: .leading)
+            ZStack { bg }.frame(width: 44)
+            ZStack { fg }.frame(width: 44)
+            ZStack { hidden }.frame(width: 44)
+            ZStack { preview }.frame(width: 60, alignment: .trailing)
+            ZStack { menu }.frame(width: 20)
         }
     }
 }
