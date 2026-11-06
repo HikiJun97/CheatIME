@@ -36,7 +36,15 @@ There is no Xcode project. The `Makefile` calls `swiftc` directly.
 
 1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`.
 2. Merge into `main`, then push a tag that matches the version, for example `v1.2.0`.
-3. GitHub Actions (`.github/workflows/release.yml`, `xcode-27` runner) checks that the tag matches `Info.plist`, builds the DMG, ZIP, and `SHA256SUMS.txt`, and creates a draft release using `.github/release-notes.md`.
+3. GitHub Actions (`.github/workflows/release.yml`, `xcode-27` runner) checks that the tag matches `Info.plist`, signs the app, builds the DMG, ZIP, and `SHA256SUMS.txt`, and creates a draft release using `.github/release-notes.md`.
 4. Fill in "What's new" on the draft and publish it.
 
-Builds are ad-hoc signed and not notarized. Pull requests run the same build without creating a release.
+Builds are not notarized. Pull requests run the same build, ad-hoc signed, without creating a release.
+
+## Code signing
+
+Releases are signed with a self-signed certificate whose SHA-1 is `SIGN_CERT` in the `Makefile`. macOS ties the Accessibility grant to that certificate, so the grant survives updates. The workflow reads the certificate from the `SIGNING_CERTIFICATE` (base64 p12) and `SIGNING_CERTIFICATE_PASSWORD` secrets and fails if the app is not signed with `SIGN_CERT`.
+
+`make` and `make install` use the same certificate when it is in your keychain, and ad-hoc signing otherwise. macOS treats an ad-hoc build as a new app whenever its code changes, so after installing one you have to remove CheatIME from the Accessibility list and allow it again.
+
+Replace the certificate only if it is lost or leaked, because every user would have to allow Accessibility again. Update `SIGN_CERT` and both secrets together.

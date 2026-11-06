@@ -7,21 +7,19 @@ An always-on-top badge that shows your current input language on macOS.<br>
 <b>English</b> · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-Ever pressed a shortcut in the terminal or Vim, only to find the input source was set to another language? CheatIME shows your input language at a glance and can switch it for you in specific apps.
+An always-on-top input mode indicator that keeps your input language on screen, in a corner of your choice or next to the cursor. It was made for multilingual users of terminal tools like nvim, where shortcuts and other commands only work with English input.
 
 <p align="center"><img src="docs/badges.png" width="560" alt="Example badges for several languages and shapes"></p>
 
 ## Features
 
-- Stays on top of everything, including full-screen apps
-- Works with input sources in any language
-- Place the badge at a fixed spot, next to the pointer, or next to the text cursor, or several at once
-- Set the label and colors for each language, plus shape, size, opacity, border, and Liquid Glass
-- Show it all the time, or only briefly when the input source changes
-- Show it only in the apps you choose
-- Switch to a chosen input source automatically when an app comes to the front
-- Optional sound on change, and Open at login
-- Updates itself from within the app; it asks on the second launch whether to check automatically
+- Stays on top of every window, including full-screen apps
+- Shows the indicator wherever you like: a fixed spot on screen, next to the pointer, or next to the text cursor (text cursor in some apps only)
+- Style the indicator however you like for each language
+- Show it all the time, or only when the language changes
+- Show the indicator only in the apps you choose
+- Set rules that switch to a specific language when you switch to a specific app
+- Sound alerts
 
 <p align="center"><img src="docs/settings-en.png" width="560" alt="Badge settings"></p>
 <p align="center"><img src="docs/rules-en.png" width="560" alt="Auto-switch rules"></p>
@@ -34,18 +32,14 @@ macOS 15 or later, Apple silicon or Intel.
 
 1. Download `CheatIME-<version>.dmg` from [Releases](https://github.com/HikiJun97/CheatIME/releases).
 2. Open the DMG and drag **CheatIME** to **Applications**.
-3. CheatIME isn't notarized, so macOS blocks the first launch. Open it once, then click **Open Anyway** in **System Settings → Privacy & Security**. Or run:
+3. Open it once, then click **Open Anyway** in **System Settings → Privacy & Security**. Or run this in Terminal:
    ```sh
    xattr -dr com.apple.quarantine /Applications/CheatIME.app
    ```
 
-## Usage
+## Notes
 
-- **Menu bar icon**: Settings… (⌘,), Show Badge, Check for Updates…, Quit CheatIME
-- **Badge**: click to hide, drag to move, right-click for the menu
-- Can't see the menu bar icon? Open CheatIME again from Spotlight or Finder to bring up Settings.
-
-**Next to Text Cursor** needs Accessibility access (**Device Control and Data Access** in macOS 27). Allow CheatIME in **System Settings → Privacy & Security → Accessibility**. After each update, remove CheatIME from that list and allow it again.
+- Showing the indicator **Next to Text Cursor** needs Accessibility access (**Device Control and Data Access** in macOS 27). Allow CheatIME in **System Settings → Privacy & Security → Accessibility**.
 
 ## Build from source
 
@@ -58,18 +52,6 @@ make            # build CheatIME.app
 make install    # copy to /Applications and launch
 make dist       # create the DMG and ZIP in dist/
 ```
-
-## Uninstall
-
-Quit CheatIME and delete it from Applications (or run `make uninstall`). To remove its settings too:
-
-```sh
-defaults delete io.github.hikijun97.cheatime
-```
-
-## Privacy
-
-CheatIME doesn't read your keystrokes. It connects to GitHub only to check for updates, which you can turn off in Settings → General. Accessibility access is used only to find the text cursor.
 
 ## Inspired by
 
