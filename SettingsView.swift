@@ -193,6 +193,7 @@ struct StyleSections: View {
     let scope: String
     @AppStorage private var shape: String
     @AppStorage private var fontSize: Double
+    @AppStorage private var badgeSize: Double
     @AppStorage private var dotSize: Double
     @AppStorage private var opacity: Double
     @AppStorage private var glass: Bool
@@ -208,7 +209,8 @@ struct StyleSections: View {
         self.scope = scope
         func key(_ name: String) -> String { K.style(scope, name) }
         _shape = AppStorage(wrappedValue: "rounded", key(K.shape))
-        _fontSize = AppStorage(wrappedValue: 15.0, key(K.fontSize))
+        _fontSize = AppStorage(wrappedValue: 16.0, key(K.fontSize))
+        _badgeSize = AppStorage(wrappedValue: 29.0, key(K.badgeSize))
         _dotSize = AppStorage(wrappedValue: 12.0, key(K.dotSize))
         _opacity = AppStorage(wrappedValue: 0.9, key(K.opacity))
         _glass = AppStorage(wrappedValue: false, key(K.glass))
@@ -257,6 +259,7 @@ struct StyleSections: View {
             if shape == "dot" {
                 NumberSlider(title: "점 크기", value: $dotSize, range: 4...40)
             } else {
+                NumberSlider(title: "뱃지 크기", value: $badgeSize, range: 16...90)
                 NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
             }
             NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
@@ -282,7 +285,9 @@ struct StyleSections: View {
     private func preview(_ lang: String) -> BadgeView {
         var badge = BadgeView(lang: lang, scope: scope)
         badge.shape = shape
-        badge.fontSize = min(fontSize, 20)
+        let scale = min(1, 36 / badgeSize)
+        badge.fontSize = fontSize * scale
+        badge.badgeSize = badgeSize * scale
         badge.dotSize = min(dotSize, 20)
         badge.opacity = opacity
         badge.glass = glass
@@ -358,7 +363,7 @@ final class ScreenList: ObservableObject {
 struct FixedSections: View {
     @AppStorage(K.displayMode) private var displayMode = "all"
     @AppStorage(K.displays) private var displays = ""
-    @AppStorage(K.hAlign) private var hAlign = "right"
+    @AppStorage(K.hAlign) private var hAlign = "left"
     @AppStorage(K.vAlign) private var vAlign = "bottom"
     @AppStorage(K.marginX) private var marginX = 12.0
     @AppStorage(K.marginY) private var marginY = 12.0

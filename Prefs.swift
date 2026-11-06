@@ -7,6 +7,7 @@ enum K {
     static let displays = "displays"
     static let shape = "shape"
     static let fontSize = "fontSize"
+    static let badgeSize = "badgeSize"
     static let dotSize = "dotSize"
     static let border = "border"
     static let borderWidth = "borderWidth"
@@ -32,7 +33,7 @@ enum K {
     static let flashDuration = "flashDuration"
     static let styleTarget = "styleTarget"
     static let modes = ["fixed", "pointer", "caret"]
-    static let styleKeys = [shape, fontSize, dotSize, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
+    static let styleKeys = [shape, fontSize, badgeSize, dotSize, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
     static func style(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
     static func useDefault(_ mode: String) -> String { "\(mode).useDefault" }
     static func show(_ mode: String) -> String {
@@ -53,16 +54,21 @@ func registerDefaults() {
     let mode = d.string(forKey: K.positionMode) ?? "fixed"
     var defaults: [String: Any] = [
         K.visible: true, K.displayMode: "all", K.displays: "", K.sound: false, K.rules: "[]", K.appFilter: false,
-        K.filterApps: "", K.soundName: "Tink", K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
+        K.filterApps: "", K.soundName: "Tink", K.hAlign: "left", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
         K.settingsTab: "badge", K.styleTarget: "default",
         K.showFixed: mode == "fixed", K.showPointer: mode == "pointer", K.showCaret: mode == "caret", K.caretFallback: true,
     ]
     let style: [String: Any] = [
-        K.shape: "rounded", K.fontSize: 15.0, K.dotSize: 12.0, K.opacity: 0.9, K.glass: false,
+        K.shape: "rounded", K.fontSize: 16.0, K.badgeSize: 29.0, K.dotSize: 12.0, K.opacity: 0.9, K.glass: false,
         K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF", K.flashOnly: false, K.flashDuration: 1200.0,
     ]
     for scope in ["default"] + K.modes {
         for (key, value) in style { defaults[K.style(scope, key)] = d.object(forKey: key) ?? value }
+        let badgeSize = K.style(scope, K.badgeSize)
+        if d.object(forKey: badgeSize) == nil,
+           let fontSize = (d.object(forKey: K.style(scope, K.fontSize)) ?? d.object(forKey: K.fontSize)) as? Double {
+            d.set((fontSize * 1.8).rounded(), forKey: badgeSize)
+        }
     }
     for m in K.modes { defaults[K.useDefault(m)] = true }
     d.register(defaults: defaults)

@@ -25,6 +25,7 @@
 "위" = "Top";
 "아래" = "Bottom";
 "글자 크기" = "Font size";
+"뱃지 크기" = "Badge size";
 "불투명도 (%)" = "Opacity (%)";
 "가로 여백" = "Horizontal margin";
 "세로 여백" = "Vertical margin";
