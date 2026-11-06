@@ -333,7 +333,7 @@ struct CaretSection: View {
             }
             Toggle("텍스트 커서를 찾지 못하면 마우스 포인터 옆에 표시", isOn: $caretFallback)
                 .disabled(showPointer)
-            Text("마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다.")
+            Text("마우스 포인터 옆에 상시로 띄울 때보다 움직임이 덜 부드럽습니다.")
                 .foregroundStyle(.secondary)
         }
     }
