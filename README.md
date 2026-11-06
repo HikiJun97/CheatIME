@@ -45,7 +45,7 @@ macOS 15 or later, Apple silicon or Intel.
 - **Badge**: click to hide, drag to move, right-click for the menu
 - Can't see the menu bar icon? Open CheatIME again from Spotlight or Finder to bring up Settings.
 
-**Next to Text Cursor** needs Accessibility access (**Device Control and Data Access** in macOS 27). Allow CheatIME in **System Settings → Privacy & Security → Accessibility**. If you update from 1.2.0 or earlier, remove CheatIME from that list and allow it again once.
+**Next to Text Cursor** needs Accessibility access (**Device Control and Data Access** in macOS 27). Allow CheatIME in **System Settings → Privacy & Security → Accessibility**. After each update, remove CheatIME from that list and allow it again.
 
 ## Build from source
 
