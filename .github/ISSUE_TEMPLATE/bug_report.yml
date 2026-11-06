@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in CheatIME doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Set the badge to show next to the text cursor
+        2. Open Terminal
+        3. Switch the input source
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CheatIME version
+      description: Shown in Settings → General → Version.
+      placeholder: "1.4.0"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 26.1, Apple silicon"
+    validations:
+      required: true
+  - type: textarea
+    id: input-sources
+    attributes:
+      label: Input sources
+      description: The input sources you use, from System Settings → Keyboard → Text Input → Input Sources.
+      placeholder: "ABC, 2-Set Korean, Japanese – Romaji"
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, the app you were using, or anything that might help.
