@@ -1,3 +1,4 @@
+import Carbon
 import Combine
 import SwiftUI
 
@@ -179,6 +180,9 @@ struct PositionSections: View {
         if mode == "caret" {
             CaretSection()
         }
+        if mode != "fixed" {
+            PlacementSection(mode: mode)
+        }
         if !useDefault {
             StyleSections(scope: mode)
             TimingSection(scope: mode)
@@ -195,6 +199,8 @@ struct StyleSections: View {
     @AppStorage private var fontSize: Double
     @AppStorage private var badgeSize: Double
     @AppStorage private var dotSize: Double
+    @AppStorage private var badgeWidth: Double
+    @AppStorage private var cornerRadius: Double
     @AppStorage private var opacity: Double
     @AppStorage private var glass: Bool
     @AppStorage private var border: String
@@ -215,6 +221,8 @@ struct StyleSections: View {
         _fontSize = AppStorage(wrappedValue: 16.0, key(K.fontSize))
         _badgeSize = AppStorage(wrappedValue: 29.0, key(K.badgeSize))
         _dotSize = AppStorage(wrappedValue: 12.0, key(K.dotSize))
+        _badgeWidth = AppStorage(wrappedValue: 0.0, key(K.badgeWidth))
+        _cornerRadius = AppStorage(wrappedValue: 22.0, key(K.cornerRadius))
         _opacity = AppStorage(wrappedValue: 0.9, key(K.opacity))
         _glass = AppStorage(wrappedValue: false, key(K.glass))
         _border = AppStorage(wrappedValue: "none", key(K.border))
@@ -255,13 +263,28 @@ struct StyleSections: View {
                 Text("캡슐").tag("capsule")
                 Text("원").tag("circle")
                 Text("점").tag("dot")
+                Text("직접 설정").tag("custom")
             }
             .pickerStyle(.segmented)
+            .onChange(of: shape) { old, new in
+                guard new == "custom" else { return }
+                badgeWidth = old == "circle" ? badgeSize : 0
+                cornerRadius = old == "rounded" ? 22 : 50
+            }
             if #available(macOS 26, *) {
                 Toggle("유리 효과 (Liquid Glass)", isOn: $glass)
             }
             if shape == "dot" {
                 NumberSlider(title: "점 크기", value: $dotSize, range: 4...40)
+            } else if shape == "custom" {
+                NumberSlider(title: "높이", value: $badgeSize, range: 16...90)
+                Toggle("폭을 글자에 맞추기", isOn: Binding(get: { badgeWidth == 0 },
+                                                   set: { badgeWidth = $0 ? 0 : badgeSize }))
+                if badgeWidth > 0 {
+                    NumberSlider(title: "폭", value: $badgeWidth, range: 16...240)
+                }
+                NumberSlider(title: "모서리 반지름 (%)", value: $cornerRadius, range: 0...50)
+                NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
             } else {
                 NumberSlider(title: "뱃지 크기", value: $badgeSize, range: 16...90)
                 NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
@@ -293,6 +316,8 @@ struct StyleSections: View {
         badge.fontSize = fontSize * scale
         badge.badgeSize = badgeSize * scale
         badge.dotSize = min(dotSize, 20)
+        badge.badgeWidth = badgeWidth * scale
+        badge.cornerRadius = cornerRadius
         badge.opacity = opacity
         badge.glass = glass
         badge.border = border
@@ -318,6 +343,148 @@ struct TimingSection: View {
             NumberSlider(title: "표시 시간 (ms)", value: $flashDuration, range: 300...5000)
                 .disabled(!flashOnly)
         }
+    }
+}
+
+struct PlacementSection: View {
+    let mode: String
+    @AppStorage private var direction: String
+    @AppStorage private var gapX: Double
+    @AppStorage private var gapY: Double
+    @AppStorage private var flip: Bool
+
+    init(mode: String) {
+        self.mode = mode
+        _direction = AppStorage(wrappedValue: mode == "caret" ? "right" : "bottomRight", K.direction(mode))
+        _gapX = AppStorage(wrappedValue: mode == "caret" ? 6.0 : 16.0, K.gapX(mode))
+        _gapY = AppStorage(wrappedValue: mode == "caret" ? 6.0 : 16.0, K.gapY(mode))
+        _flip = AppStorage(wrappedValue: false, K.flip(mode))
+    }
+
+    var body: some View {
+        let placement = Placement(mode: mode)
+        Section("위치") {
+            HStack(spacing: 16) {
+                DirectionGrid(selection: $direction, center: mode == "caret" ? "character.cursor.ibeam" : "cursorarrow")
+                PlacementPreview(mode: mode, placement: placement)
+            }
+            NumberSlider(title: "가로 거리", value: $gapX, range: 0...100)
+                .disabled(placement.h == 0)
+            NumberSlider(title: "세로 거리", value: $gapY, range: 0...100)
+                .disabled(placement.v == 0)
+            Picker("화면 끝에 닿으면", selection: $flip) {
+                Text("화면 안쪽으로 밀기").tag(false)
+                Text("반대쪽으로 옮기기").tag(true)
+            }
+        }
+    }
+}
+
+struct DirectionGrid: View {
+    @Binding var selection: String
+    let center: String
+
+    private let arrows = ["arrow.up.left", "arrow.up", "arrow.up.right", "arrow.left", "", "arrow.right",
+                          "arrow.down.left", "arrow.down", "arrow.down.right"]
+
+    var body: some View {
+        Grid(horizontalSpacing: 4, verticalSpacing: 4) {
+            ForEach(0..<3, id: \.self) { row in
+                GridRow {
+                    ForEach(0..<3, id: \.self) { column in
+                        cell(row * 3 + column)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cell(_ index: Int) -> some View {
+        let id = Placement.directions[index]
+        if id.isEmpty {
+            Image(systemName: center)
+                .frame(width: 28, height: 28)
+                .foregroundStyle(.secondary)
+        } else {
+            let selected = selection == id
+            Button { selection = id } label: {
+                Image(systemName: arrows[index])
+                    .frame(width: 28, height: 28)
+                    .foregroundStyle(selected ? Color.white : Color.primary)
+                    .background(selected ? Color.accentColor : Color.secondary.opacity(0.15),
+                                in: RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+/// Draws the anchor (mouse arrow or text caret) and the badge at their real distance, shrunk only when it does not fit.
+struct PlacementPreview: View {
+    let mode: String
+    let placement: Placement
+    @StateObject private var changes = BadgeChanges()
+
+    private static let caret = CGRect(x: -1, y: -9, width: 2, height: 18)
+
+    var body: some View {
+        let badge = badge()
+        let size = NSHostingView(rootView: badge).fittingSize
+        let o = placement.origin(around: mode == "caret" ? Self.caret : .zero, size: size)
+        let badgeRect = CGRect(x: o.x, y: -o.y - size.height, width: size.width, height: size.height)
+        let cursor = NSCursor.arrow
+        let anchorRect = mode == "caret"
+            ? CGRect(x: -85, y: -9, width: 87, height: 18)
+            : CGRect(origin: CGPoint(x: -cursor.hotSpot.x, y: -cursor.hotSpot.y), size: cursor.image.size)
+        let all = badgeRect.union(anchorRect)
+        GeometryReader { geo in
+            let scale = min(1, (geo.size.width - 24) / all.width, (geo.size.height - 24) / all.height)
+            ZStack(alignment: .topLeading) {
+                Group {
+                    if mode == "caret" {
+                        HStack(spacing: 0) {
+                            Text(verbatim: "가나다라")
+                                .font(.system(size: 15))
+                                .frame(width: 84, alignment: .trailing)
+                            Rectangle().fill(Color.accentColor).frame(width: 2, height: 18)
+                            Spacer().frame(width: 1)
+                        }
+                    } else {
+                        Image(nsImage: cursor.image)
+                    }
+                }
+                .offset(x: anchorRect.minX - all.minX, y: anchorRect.minY - all.minY)
+                badge.offset(x: badgeRect.minX - all.minX, y: badgeRect.minY - all.minY)
+            }
+            .frame(width: all.width, height: all.height, alignment: .topLeading)
+            .scaleEffect(scale)
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .frame(height: 120)
+        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
+    }
+
+    private func badge() -> BadgeView {
+        var badge = BadgeView(source: currentInputSource(), scope: styleScope(mode))
+        badge.inset = 0
+        return badge
+    }
+}
+
+/// Redraws a view when the badge style or the current input source changes.
+final class BadgeChanges: ObservableObject {
+    private var subscription: AnyCancellable?
+
+    init() {
+        subscription = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .merge(with: DistributedNotificationCenter.default().publisher(
+                for: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String)))
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.objectWillChange.send() }
+            }
     }
 }
 

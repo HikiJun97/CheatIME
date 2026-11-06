@@ -99,3 +99,13 @@
 "키를 누르세요" = "Press Keys…";
 "지우기" = "Clear";
 "키패드 %@" = "Keypad %@";
+"직접 설정" = "Custom";
+"높이" = "Height";
+"폭을 글자에 맞추기" = "Fit Width to Text";
+"폭" = "Width";
+"모서리 반지름 (%)" = "Corner radius (%)";
+"가로 거리" = "Horizontal distance";
+"세로 거리" = "Vertical distance";
+"화면 끝에 닿으면" = "At Screen Edge";
+"화면 안쪽으로 밀기" = "Push Inside";
+"반대쪽으로 옮기기" = "Move to Opposite Side";

@@ -10,6 +10,8 @@ enum K {
     static let badgeSize = "badgeSize"
     static let badgeSizeMigrated = "badgeSizeMigrated"
     static let dotSize = "dotSize"
+    static let badgeWidth = "badgeWidth"
+    static let cornerRadius = "cornerRadius"
     static let border = "border"
     static let borderWidth = "borderWidth"
     static let borderColor = "borderColor"
@@ -36,7 +38,7 @@ enum K {
     static let toggleKey = "toggleKey"
     static let toggleModifiers = "toggleModifiers"
     static let modes = ["fixed", "pointer", "caret"]
-    static let styleKeys = [shape, fontSize, badgeSize, dotSize, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
+    static let styleKeys = [shape, fontSize, badgeSize, dotSize, badgeWidth, cornerRadius, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
     static func style(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
     static func useDefault(_ mode: String) -> String { "\(mode).useDefault" }
     static func show(_ mode: String) -> String {
@@ -46,6 +48,10 @@ enum K {
         default: showCaret
         }
     }
+    static func direction(_ mode: String) -> String { "\(mode).direction" }
+    static func gapX(_ mode: String) -> String { "\(mode).gapX" }
+    static func gapY(_ mode: String) -> String { "\(mode).gapY" }
+    static func flip(_ mode: String) -> String { "\(mode).flip" }
     static func label(_ lang: String) -> String { "lang.\(lang).label" }
     static func bg(_ lang: String) -> String { "lang.\(lang).bg" }
     static func fg(_ lang: String) -> String { "lang.\(lang).fg" }
@@ -65,9 +71,11 @@ func registerDefaults() {
         K.filterApps: "", K.soundName: "Tink", K.hAlign: "left", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
         K.settingsTab: "badge", K.styleTarget: "default", K.toggleKey: -1, K.toggleModifiers: 0,
         K.showFixed: mode == "fixed", K.showPointer: mode == "pointer", K.showCaret: mode == "caret", K.caretFallback: true,
+        K.direction("pointer"): "bottomRight", K.gapX("pointer"): 16.0, K.gapY("pointer"): 16.0, K.flip("pointer"): false,
+        K.direction("caret"): "right", K.gapX("caret"): 6.0, K.gapY("caret"): 6.0, K.flip("caret"): false,
     ]
     let style: [String: Any] = [
-        K.shape: "rounded", K.fontSize: 16.0, K.badgeSize: 29.0, K.dotSize: 12.0, K.opacity: 0.9, K.glass: false,
+        K.shape: "rounded", K.fontSize: 16.0, K.badgeSize: 29.0, K.dotSize: 12.0, K.badgeWidth: 0.0, K.cornerRadius: 22.0, K.opacity: 0.9, K.glass: false,
         K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF", K.flashOnly: false, K.flashDuration: 1200.0,
     ]
     let migrateBadgeSize = !d.bool(forKey: K.badgeSizeMigrated)
@@ -127,6 +135,42 @@ extension Color {
 func systemSounds() -> [String] {
     let files = (try? FileManager.default.contentsOfDirectory(atPath: "/System/Library/Sounds")) ?? []
     return files.map { ($0 as NSString).deletingPathExtension }.sorted()
+}
+
+/// Where a follow-mode badge sits around its anchor: the mouse hot spot or the text caret.
+struct Placement {
+    static let directions = ["topLeft", "top", "topRight", "left", "", "right", "bottomLeft", "bottom", "bottomRight"]
+
+    var h: Int
+    var v: Int
+    var gapX: Double
+    var gapY: Double
+    var flip: Bool
+
+    init(mode: String) {
+        let d = UserDefaults.standard
+        let index = Placement.directions.firstIndex(of: d.string(forKey: K.direction(mode)) ?? "bottomRight") ?? 8
+        h = index % 3 - 1
+        v = 1 - index / 3
+        gapX = d.double(forKey: K.gapX(mode))
+        gapY = d.double(forKey: K.gapY(mode))
+        flip = d.bool(forKey: K.flip(mode))
+    }
+
+    /// Bottom-left origin of the badge in y-up screen coordinates.
+    func origin(around a: CGRect, size: CGSize) -> CGPoint {
+        let x = switch h {
+        case 1: a.maxX + gapX
+        case -1: a.minX - gapX - size.width
+        default: a.midX - size.width / 2
+        }
+        let y = switch v {
+        case 1: a.maxY + gapY
+        case -1: a.minY - gapY - size.height
+        default: a.midY - size.height / 2
+        }
+        return CGPoint(x: x, y: y)
+    }
 }
 
 func styleScope(_ mode: String) -> String {

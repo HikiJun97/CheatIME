@@ -8,6 +8,8 @@ struct BadgeView: View {
     var fontSize: Double
     var badgeSize: Double
     var dotSize: Double
+    var badgeWidth = 0.0
+    var cornerRadius = 22.0
     var opacity: Double
     var glass: Bool
     var border = "none"
@@ -18,9 +20,11 @@ struct BadgeView: View {
     var body: some View {
         let isDot = shape == "dot"
         let h = isDot ? dotSize : badgeSize
+        let fixedWidth: CGFloat? = shape == "circle" || isDot ? h : shape == "custom" && badgeWidth > 0 ? badgeWidth : nil
         let padding = switch shape {
         case "circle", "dot": 0.0
         case "capsule": (h * 0.39).rounded()
+        case "custom": min((h * (0.2 + 0.38 * radius)).rounded(), max(0, (((fixedWidth ?? .infinity) - h) / 2).rounded(.down)))
         default: (h * 0.28).rounded()
         }
         let dash: [CGFloat] = switch border {
@@ -40,8 +44,8 @@ struct BadgeView: View {
                 content.offset(x: proxy.size.width / 2 - ink.midX * min(1, proxy.size.width / ink.width))
             }
             .padding(.horizontal, padding)
-            .frame(width: shape == "circle" || isDot ? h : nil)
-            .frame(minWidth: h)
+            .frame(width: fixedWidth)
+            .frame(minWidth: fixedWidth == nil ? h : nil)
         Group {
             if glass, #available(macOS 26, *) {
                 text.glassEffect(.regular.tint(bg), in: outline())
@@ -68,6 +72,8 @@ struct BadgeView: View {
         .fixedSize()
     }
 
+    private var radius: Double { min(max(cornerRadius, 0), 50) / 100 }
+
     private func inkBounds() -> (midX: CGFloat, midY: CGFloat, width: CGFloat) {
         guard !label.isEmpty, shape != "dot" else { return (0.5, 0, 1) }
         let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
@@ -81,6 +87,9 @@ struct BadgeView: View {
         switch shape {
         case "circle", "dot": AnyShape(Circle())
         case "capsule": AnyShape(Capsule(style: .circular))
+        case "custom":
+            AnyShape(RoundedRectangle(cornerRadius: max(0, badgeSize * radius - inset),
+                                      style: radius >= 0.5 ? .circular : .continuous))
         default: AnyShape(RoundedRectangle(cornerRadius: max(0, badgeSize * 0.22 - inset)))
         }
     }
@@ -108,6 +117,8 @@ extension BadgeView {
                   fontSize: d.double(forKey: key(K.fontSize)),
                   badgeSize: badgeSize,
                   dotSize: d.double(forKey: key(K.dotSize)),
+                  badgeWidth: d.double(forKey: key(K.badgeWidth)),
+                  cornerRadius: d.double(forKey: key(K.cornerRadius)),
                   opacity: d.double(forKey: key(K.opacity)),
                   glass: glass,
                   border: d.string(forKey: key(K.border)) ?? "none",
@@ -282,8 +293,7 @@ final class Overlay {
         }
         guard let size = caretSize else { return }
         if let bounds, let caret = caretRect(from: bounds) {
-            let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
-            put(caretPanel, at: clamped(p, size: size, near: caret.origin), size: size)
+            put(caretPanel, at: origin("caret", around: caret, size: size), size: size)
         } else if pointerSize != nil || !caretFallback {
             caretPanel.orderOut(nil)
             return
@@ -313,13 +323,26 @@ final class Overlay {
     }
 
     private func pointerOrigin(for size: NSSize) -> NSPoint {
-        let mouse = NSEvent.mouseLocation
-        return clamped(NSPoint(x: mouse.x + 16, y: mouse.y - 16 - size.height), size: size, near: mouse)
+        origin("pointer", around: NSRect(origin: NSEvent.mouseLocation, size: .zero), size: size)
+    }
+
+    private func origin(_ mode: String, around anchor: NSRect, size: NSSize) -> NSPoint {
+        var placement = Placement(mode: mode)
+        var p = placement.origin(around: anchor, size: size)
+        if placement.flip, let v = screen(containing: anchor.origin)?.visibleFrame {
+            if p.x < v.minX || p.x + size.width > v.maxX { placement.h = -placement.h }
+            if p.y < v.minY || p.y + size.height > v.maxY { placement.v = -placement.v }
+            p = placement.origin(around: anchor, size: size)
+        }
+        return clamped(p, size: size, near: anchor.origin)
+    }
+
+    private func screen(containing p: NSPoint) -> NSScreen? {
+        NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens.first
     }
 
     private func clamped(_ p: NSPoint, size: NSSize, near anchor: NSPoint) -> NSPoint {
-        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(anchor, $0.frame, false) }) ?? NSScreen.screens.first
-        else { return p }
+        guard let screen = screen(containing: anchor) else { return p }
         let v = screen.visibleFrame
         return NSPoint(x: min(max(p.x, v.minX), v.maxX - size.width), y: min(max(p.y, v.minY), v.maxY - size.height))
     }
