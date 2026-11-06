@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var refreshScheduled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let firstLaunch = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?.isEmpty ?? true
         AppLanguage.captureLaunchLanguage()
         _ = InputSources.shared
         _ = Updates.shared
@@ -73,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         refresh()
+        if firstLaunch { openSettings() }
     }
 
     func showPendingUpdate(_ version: String?) {

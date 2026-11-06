@@ -55,6 +55,13 @@ jobs:
           echo "SIGN_IDENTITY=$(sed -n 's/^SIGN_CERT := //p' Makefile)" >> "$GITHUB_ENV"
           echo "SIGN_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dmgbuild
+        run: pip install dmgbuild==1.6.7
+
       - name: Build DMG and ZIP
         run: make dist
 

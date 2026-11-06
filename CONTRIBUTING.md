@@ -4,6 +4,7 @@
 
 - Xcode 27, or the Command Line Tools with the macOS 27 SDK (Swift 6.2 or later)
 - The macOS 27 SDK is needed only to build. The app targets macOS 15, so the result runs on macOS 15 or later.
+- `make dist` also needs [dmgbuild](https://github.com/dmgbuild/dmgbuild) on `PATH` (for example, `uv tool install dmgbuild==1.6.7`). The DMG window layout and background live in `dmg/`.
 
 ## Build and run
 
