@@ -16,7 +16,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var refreshScheduled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let firstLaunch = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?.isEmpty ?? true
         AppLanguage.captureLaunchLanguage()
         _ = InputSources.shared
         _ = Updates.shared
@@ -153,6 +152,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+let firstLaunch = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?.isEmpty ?? true
 registerDefaults()
 let app = NSApplication.shared
 let delegate = AppDelegate()
