@@ -102,8 +102,9 @@ func langDefaults(_ lang: String) -> (label: String, bg: String, fg: String) {
 }
 
 func defaultLabel(_ source: InputSourceInfo) -> String {
-    UserDefaults.standard.string(forKey: K.label(source.lang))
-        ?? systemLabels[source.mode] ?? langDefaults(source.lang).label
+    let fallback = langDefaults(source.lang).label
+    let legacy = UserDefaults.standard.string(forKey: K.label(source.lang)).flatMap { $0 == fallback ? nil : $0 }
+    return legacy ?? systemLabels[source.mode] ?? fallback
 }
 
 func badgeLook(_ source: InputSourceInfo) -> (label: String, bg: String, fg: String, hidden: Bool) {

@@ -51,7 +51,7 @@ struct BadgeView: View {
                 text.glassEffect(.regular.tint(bg), in: outline())
             } else {
                 text.background {
-                        if border == "none" {
+                        if border != "solid" {
                             outline().fill(bg)
                         } else {
                             outline(inset: borderWidth / 2).fill(bg).padding(borderWidth / 2)

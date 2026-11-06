@@ -675,6 +675,7 @@ struct LanguageGroup: View {
     @AppStorage private var bg: String
     @AppStorage private var fg: String
     @AppStorage private var modeColors: Bool
+    @AppStorage private var hidden: Bool
 
     init(lang: String, modes: [InputSourceInfo], index: Int, style: BadgeView, order: Binding<String>, drag: LanguageDrag) {
         self.lang = lang
@@ -687,6 +688,7 @@ struct LanguageGroup: View {
         _bg = AppStorage(wrappedValue: d.bg, K.bg(lang))
         _fg = AppStorage(wrappedValue: d.fg, K.fg(lang))
         _modeColors = AppStorage(wrappedValue: false, K.modeColors(lang))
+        _hidden = AppStorage(wrappedValue: false, K.hidden(lang))
     }
 
     var body: some View {
@@ -700,7 +702,7 @@ struct LanguageGroup: View {
                     label: Color.clear,
                     bg: Group { if !modeColors { colorWell("배경", $bg) } },
                     fg: Group { if !modeColors { colorWell("글자", $fg) } },
-                    hidden: Color.clear,
+                    hidden: Toggle("숨기기", isOn: hideAll).labelsHidden(),
                     preview: Color.clear,
                     menu: menu
                 )
@@ -720,6 +722,13 @@ struct LanguageGroup: View {
     }
 
     private static let dragType = "io.github.hikijun97.cheatime.language"
+
+    private var hideAll: Binding<Bool> {
+        Binding(get: { hidden }, set: { value in
+            modes.forEach { UserDefaults.standard.removeObject(forKey: K.modeHidden($0.id)) }
+            hidden = value
+        })
+    }
 
     private func handle(detail: String?) -> some View {
         HStack(spacing: 6) {
@@ -797,7 +806,8 @@ struct ModeRow<Name: View, Menu: View>: View {
     @AppStorage private var label: String
     @AppStorage private var bg: String?
     @AppStorage private var fg: String?
-    @AppStorage private var hidden: Bool
+    @AppStorage private var ownHidden: Bool?
+    @AppStorage private var langHidden: Bool
 
     init(source: InputSourceInfo, name: Name, style: BadgeView, langBg: Binding<String>, langFg: Binding<String>,
          ownColors: Bool, showColors: Bool, menu: Menu) {
@@ -812,8 +822,8 @@ struct ModeRow<Name: View, Menu: View>: View {
         _label = AppStorage(wrappedValue: defaultLabel(source), K.modeLabel(source.id))
         _bg = AppStorage(K.modeBg(source.id))
         _fg = AppStorage(K.modeFg(source.id))
-        _hidden = AppStorage(wrappedValue: UserDefaults.standard.bool(forKey: K.hidden(source.lang)),
-                             K.modeHidden(source.id))
+        _ownHidden = AppStorage(K.modeHidden(source.id))
+        _langHidden = AppStorage(wrappedValue: false, K.hidden(source.lang))
     }
 
     var body: some View {
@@ -822,12 +832,14 @@ struct ModeRow<Name: View, Menu: View>: View {
             label: TextField("표시 글자", text: $label).labelsHidden().roundedInputBorder(),
             bg: Group { if showColors { colorWell("배경", bgColor) } },
             fg: Group { if showColors { colorWell("글자", fgColor) } },
-            hidden: Toggle("숨기기", isOn: $hidden).labelsHidden(),
+            hidden: Toggle("숨기기", isOn: Binding(get: { hidden }, set: { ownHidden = $0 })).labelsHidden(),
             preview: preview,
             menu: menu
         )
         .frame(height: LanguageDropDelegate.rowHeight)
     }
+
+    private var hidden: Bool { ownHidden ?? langHidden }
 
     private var bgColor: Binding<String> {
         ownColors ? Binding(get: { bg ?? langBg }, set: { bg = $0 }) : $langBg
