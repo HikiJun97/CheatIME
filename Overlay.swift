@@ -167,7 +167,23 @@ final class BadgeHost: NSHostingView<BadgeView> {
         let dx = p.x - start.x, dy = p.y - start.y
         if !dragging && hypot(dx, dy) < 3 { return }
         dragging = true
-        window?.setFrameOrigin(NSPoint(x: origin.x + dx, y: origin.y + dy))
+        guard let window else { return }
+        window.setFrameOrigin(snapped(NSPoint(x: origin.x + dx, y: origin.y + dy), size: window.frame.size))
+    }
+
+    private func snapped(_ o: NSPoint, size: NSSize) -> NSPoint {
+        let f = NSRect(origin: o, size: size).insetBy(dx: rootView.inset, dy: rootView.inset)
+        let center = NSPoint(x: f.midX, y: f.midY)
+        guard let v = NSScreen.screens.first(where: { $0.frame.contains(center) })?.visibleFrame else { return o }
+        return NSPoint(x: o.x + Self.pull(f.minX, f.maxX, toward: v.minX, v.maxX),
+                       y: o.y + Self.pull(f.minY, f.maxY, toward: v.minY, v.maxY))
+    }
+
+    private static func pull(_ low: CGFloat, _ high: CGFloat, toward edgeLow: CGFloat, _ edgeHigh: CGFloat) -> CGFloat {
+        let snapDistance: CGFloat = 12
+        if abs(low - edgeLow) < snapDistance { return edgeLow - low }
+        if abs(edgeHigh - high) < snapDistance { return edgeHigh - high }
+        return 0
     }
 
     override func mouseUp(with event: NSEvent) {
