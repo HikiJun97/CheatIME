@@ -16,7 +16,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var refreshScheduled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let firstLaunch = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?.isEmpty ?? true
         AppLanguage.captureLaunchLanguage()
         _ = InputSources.shared
         _ = Updates.shared
@@ -38,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.setAccessibilityLabel("CheatIME")
         statusItem.menu = menu
         overlay.contextMenu = menu
+        Hotkey.shared.action = { [weak self] in self?.toggleBadge() }
         updateSubscription = Updates.shared.$pendingVersion.sink { [weak self] version in
             MainActor.assumeIsolated { self?.showPendingUpdate(version) }
         }
@@ -118,6 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         lastSourceID = source
         if changed { overlay.flash() } else { overlay.update() }
+        Hotkey.shared.update()
         showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
     }
 
@@ -153,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+let firstLaunch = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?.isEmpty ?? true
 registerDefaults()
 let app = NSApplication.shared
 let delegate = AppDelegate()

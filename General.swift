@@ -94,6 +94,9 @@ struct GeneralTab: View {
                 }
             }
             Section {
+                LabeledContent("뱃지 켜기/끄기 단축키") { ShortcutRecorder() }
+            }
+            Section {
                 Picker("언어", selection: $language.selection) {
                     Text("시스템 언어").tag("system")
                     Text(verbatim: "English").tag("en")

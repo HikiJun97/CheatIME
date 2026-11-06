@@ -25,6 +25,7 @@
 "위" = "Top";
 "아래" = "Bottom";
 "글자 크기" = "Font size";
+"뱃지 크기" = "Badge size";
 "불투명도 (%)" = "Opacity (%)";
 "가로 여백" = "Horizontal margin";
 "세로 여백" = "Vertical margin";
@@ -90,3 +91,8 @@
 "업데이트 확인…" = "Check for Updates…";
 "자동으로 업데이트 확인" = "Automatically check for updates";
 "새 버전 %@ 설치…" = "Install Version %@…";
+"뱃지 켜기/끄기 단축키" = "Show/Hide Badge Shortcut";
+"단축키 입력" = "Record Shortcut";
+"키를 누르세요" = "Press Keys…";
+"지우기" = "Clear";
+"키패드 %@" = "Keypad %@";

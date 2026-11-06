@@ -6,6 +6,7 @@ struct BadgeView: View {
     var fg: Color
     var shape: String
     var fontSize: Double
+    var badgeSize: Double
     var dotSize: Double
     var opacity: Double
     var glass: Bool
@@ -16,11 +17,11 @@ struct BadgeView: View {
 
     var body: some View {
         let isDot = shape == "dot"
-        let h = isDot ? dotSize : fontSize * 1.8
+        let h = isDot ? dotSize : badgeSize
         let padding = switch shape {
         case "circle", "dot": 0.0
-        case "capsule": fontSize * 0.7
-        default: fontSize * 0.5
+        case "capsule": h * 0.39
+        default: h * 0.28
         }
         let dash: [CGFloat] = switch border {
         case "dashed": [borderWidth * 3, borderWidth * 2]
@@ -60,7 +61,7 @@ struct BadgeView: View {
         switch shape {
         case "circle", "dot": AnyShape(Circle())
         case "capsule": AnyShape(Capsule(style: .circular))
-        default: AnyShape(RoundedRectangle(cornerRadius: max(0, fontSize * 0.4 - inset)))
+        default: AnyShape(RoundedRectangle(cornerRadius: max(0, badgeSize * 0.22 - inset)))
         }
     }
 }
@@ -70,25 +71,25 @@ extension BadgeView {
         let d = UserDefaults.standard
         let l = langDefaults(lang)
         func key(_ name: String) -> String { K.style(scope, name) }
-        let fontSize = d.double(forKey: key(K.fontSize))
+        let badgeSize = d.double(forKey: key(K.badgeSize))
         let glass = d.bool(forKey: key(K.glass))
         self.init(label: d.string(forKey: K.label(lang)) ?? l.label,
                   bg: Color(hex: d.string(forKey: K.bg(lang)) ?? l.bg),
                   fg: Color(hex: d.string(forKey: K.fg(lang)) ?? l.fg),
                   shape: d.string(forKey: key(K.shape)) ?? "",
-                  fontSize: fontSize,
+                  fontSize: d.double(forKey: key(K.fontSize)),
+                  badgeSize: badgeSize,
                   dotSize: d.double(forKey: key(K.dotSize)),
                   opacity: d.double(forKey: key(K.opacity)),
                   glass: glass,
                   border: d.string(forKey: key(K.border)) ?? "none",
                   borderWidth: d.double(forKey: key(K.borderWidth)),
                   borderColor: Color(hex: d.string(forKey: key(K.borderColor)) ?? "#FFFFFF"),
-                  inset: glass ? max(8, fontSize * 0.5) : 0)
+                  inset: glass ? max(8, badgeSize * 0.28) : 0)
     }
 }
 
 final class BadgeHost: NSHostingView<BadgeView> {
-    var onClick: () -> Void = {}
     var onDrop: () -> Void = {}
     private var start = NSPoint.zero
     private var origin = NSPoint.zero
@@ -113,7 +114,7 @@ final class BadgeHost: NSHostingView<BadgeView> {
 
     override func mouseUp(with event: NSEvent) {
         if event.modifierFlags.contains(.control) { return }
-        dragging ? onDrop() : onClick()
+        if dragging { onDrop() }
     }
 
     override func rightMouseDown(with event: NSEvent) {
@@ -367,7 +368,6 @@ final class Overlay {
         panel.ignoresMouseEvents = follow
         let host = BadgeHost(rootView: BadgeView(lang: "", scope: "default"))
         host.menu = contextMenu
-        host.onClick = { UserDefaults.standard.set(false, forKey: K.visible) }
         host.onDrop = { [weak self, weak panel] in
             if let self, let panel { self.savePosition(of: panel) }
         }
