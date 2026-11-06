@@ -38,12 +38,10 @@ DIST := dist
 
 dist: $(APP)
 	$(SIGN)
-	rm -rf $(DIST) $(BUILD)/dmg
-	mkdir -p $(DIST) $(BUILD)/dmg
+	rm -rf $(DIST)
+	mkdir -p $(DIST)
 	ditto -c -k --keepParent $(APP) $(DIST)/CheatIME-$(VERSION).zip
-	cp -R $(APP) $(BUILD)/dmg/
-	ln -s /Applications $(BUILD)/dmg/Applications
-	hdiutil create -quiet -volname CheatIME -srcfolder $(BUILD)/dmg -fs HFS+ -format UDZO -ov $(DIST)/CheatIME-$(VERSION).dmg
+	dmgbuild -s dmg/settings.py CheatIME $(DIST)/CheatIME-$(VERSION).dmg
 	cd $(DIST) && shasum -a 256 CheatIME-$(VERSION).dmg CheatIME-$(VERSION).zip > SHA256SUMS.txt
 
 appcast:
