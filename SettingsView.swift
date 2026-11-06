@@ -203,7 +203,10 @@ struct StyleSections: View {
 
     @AppStorage(K.badgeLanguages) private var order = ""
     @StateObject private var drag = LanguageDrag()
+    @ObservedObject private var inputs = InputSources.shared
     private var languages: [String] { order.split(separator: ",").map(String.init) }
+
+    private func modes(of lang: String) -> [InputSourceInfo] { inputs.sources.filter { $0.lang == lang } }
 
     init(scope: String) {
         self.scope = scope
@@ -221,10 +224,10 @@ struct StyleSections: View {
 
     var body: some View {
         if scope == "default" {
-            Section("언어별 표시") {
+            Section("입력 모드별 표시") {
                 VStack(spacing: 0) {
                     LanguageColumns(
-                        name: Text("언어"), label: Text("표시 글자"), bg: Text("배경"), fg: Text("글자"),
+                        name: Text("언어 / 입력 모드"), label: Text("표시 글자"), bg: Text("배경"), fg: Text("글자"),
                         hidden: Text("숨기기"), preview: Text("미리보기"), menu: Color.clear
                     )
                     .font(.caption)
@@ -232,7 +235,8 @@ struct StyleSections: View {
                     .padding(.bottom, 8)
                     Divider()
                     ForEach(Array(languages.enumerated()), id: \.element) { index, lang in
-                        LanguageRow(lang: lang, index: index, style: preview(""), order: $order, drag: drag)
+                        LanguageGroup(lang: lang, modes: modes(of: lang), index: index, style: preview(.none),
+                                      order: $order, drag: drag)
                     }
                 }
                 Button("입력 소스 새로고침") { InputSources.shared.reload() }
@@ -243,7 +247,7 @@ struct StyleSections: View {
                 HStack {
                     Text("미리보기")
                     Spacer()
-                    ForEach(languages, id: \.self) { preview($0) }
+                    ForEach(languages.flatMap(modes), id: \.id) { preview($0) }
                 }
             }
             Picker("모양", selection: $shape) {
@@ -282,8 +286,8 @@ struct StyleSections: View {
         }
     }
 
-    private func preview(_ lang: String) -> BadgeView {
-        var badge = BadgeView(lang: lang, scope: scope)
+    private func preview(_ source: InputSourceInfo) -> BadgeView {
+        var badge = BadgeView(source: source, scope: scope)
         badge.shape = shape
         let scale = min(1, 36 / badgeSize)
         badge.fontSize = fontSize * scale
@@ -469,13 +473,14 @@ struct LanguageColumns<Name: View, Label: View, Bg: View, Fg: View, Hidden: View
 struct LanguageDropDelegate: DropDelegate {
     static let rowHeight: CGFloat = 40
     let index: Int
+    let height: CGFloat
     let drag: LanguageDrag
     @Binding var order: String
 
     func validateDrop(info: DropInfo) -> Bool { drag.dragging != nil }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        let insertion = info.location.y < Self.rowHeight / 2 ? index : index + 1
+        let insertion = info.location.y < height / 2 ? index : index + 1
         if drag.insertion != insertion { drag.insertion = insertion }
         return DropProposal(operation: .move)
     }
@@ -493,53 +498,73 @@ struct LanguageDropDelegate: DropDelegate {
     }
 }
 
-struct LanguageRow: View {
+struct LanguageGroup: View {
     let lang: String
+    let modes: [InputSourceInfo]
     let index: Int
     let style: BadgeView
     @Binding var order: String
     @ObservedObject var drag: LanguageDrag
-    @AppStorage private var label: String
     @AppStorage private var bg: String
     @AppStorage private var fg: String
-    @AppStorage private var hidden: Bool
+    @AppStorage private var modeColors: Bool
 
-    init(lang: String, index: Int, style: BadgeView, order: Binding<String>, drag: LanguageDrag) {
+    init(lang: String, modes: [InputSourceInfo], index: Int, style: BadgeView, order: Binding<String>, drag: LanguageDrag) {
         self.lang = lang
+        self.modes = modes
         self.index = index
         self.style = style
         _order = order
         self.drag = drag
         let d = langDefaults(lang)
-        _label = AppStorage(wrappedValue: d.label, K.label(lang))
         _bg = AppStorage(wrappedValue: d.bg, K.bg(lang))
         _fg = AppStorage(wrappedValue: d.fg, K.fg(lang))
-        _hidden = AppStorage(wrappedValue: false, K.hidden(lang))
+        _modeColors = AppStorage(wrappedValue: false, K.modeColors(lang))
     }
 
     var body: some View {
-        LanguageColumns(
-            name: handle,
-            label: TextField("표시 글자", text: $label).labelsHidden().roundedInputBorder(),
-            bg: ColorPicker("배경", selection: color($bg), supportsOpacity: false).labelsHidden(),
-            fg: ColorPicker("글자", selection: color($fg), supportsOpacity: false).labelsHidden(),
-            hidden: Toggle("숨기기", isOn: $hidden).labelsHidden(),
-            preview: preview,
-            menu: menu
-        )
-        .frame(height: LanguageDropDelegate.rowHeight)
+        VStack(spacing: 0) {
+            if modes.count == 1 {
+                ModeRow(source: modes[0], name: handle(detail: modes[0].name), style: style,
+                        langBg: $bg, langFg: $fg, ownColors: modeColors, showColors: true, menu: menu)
+            } else {
+                LanguageColumns(
+                    name: handle(detail: nil),
+                    label: Color.clear,
+                    bg: Group { if !modeColors { colorWell("배경", $bg) } },
+                    fg: Group { if !modeColors { colorWell("글자", $fg) } },
+                    hidden: Color.clear,
+                    preview: Color.clear,
+                    menu: menu
+                )
+                .frame(height: LanguageDropDelegate.rowHeight)
+                ForEach(modes, id: \.id) { mode in
+                    ModeRow(source: mode, name: Text(mode.name).lineLimit(1).padding(.leading, 22), style: style,
+                            langBg: $bg, langFg: $fg, ownColors: modeColors, showColors: modeColors, menu: Color.clear)
+                }
+            }
+        }
         .contentShape(Rectangle())
         .overlay(alignment: .top) { indicator(at: index) }
         .overlay(alignment: .bottom) { indicator(at: index + 1).opacity(list.last == lang ? 1 : 0) }
-        .onDrop(of: [Self.dragType], delegate: LanguageDropDelegate(index: index, drag: drag, order: $order))
+        .onDrop(of: [Self.dragType], delegate: LanguageDropDelegate(
+            index: index, height: CGFloat(modes.count > 1 ? modes.count + 1 : 1) * LanguageDropDelegate.rowHeight,
+            drag: drag, order: $order))
     }
 
     private static let dragType = "io.github.hikijun97.cheatime.language"
 
-    private var handle: some View {
+    private func handle(detail: String?) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
-            Text(Locale.current.localizedString(forLanguageCode: lang) ?? lang).lineLimit(1)
+            Text(Locale.current.localizedString(forIdentifier: lang) ?? lang).lineLimit(1)
+            if let detail {
+                Text("· " + detail).foregroundStyle(.secondary).lineLimit(1)
+            }
+            if modeColors {
+                Text(verbatim: "·").foregroundStyle(.secondary)
+                Text("모드별 색").foregroundStyle(.secondary).lineLimit(1)
+            }
         }
         .contentShape(Rectangle())
         .onDrag {
@@ -557,6 +582,10 @@ struct LanguageRow: View {
         Menu {
             Button("위로 이동") { move(by: -1) }.disabled(list.first == lang)
             Button("아래로 이동") { move(by: 1) }.disabled(list.last == lang)
+            if modes.count > 1 || modeColors {
+                Divider()
+                Toggle("입력 모드마다 다른 색 쓰기", isOn: $modeColors)
+            }
             Divider()
             Button("목록에서 제거") { order = list.filter { $0 != lang }.joined(separator: ",") }
         } label: {
@@ -587,19 +616,74 @@ struct LanguageRow: View {
         langs.swapAt(i, i + offset)
         order = langs.joined(separator: ",")
     }
+}
+
+struct ModeRow<Name: View, Menu: View>: View {
+    let source: InputSourceInfo
+    let name: Name
+    let style: BadgeView
+    @Binding var langBg: String
+    @Binding var langFg: String
+    let ownColors: Bool
+    let showColors: Bool
+    let menu: Menu
+    @AppStorage private var label: String
+    @AppStorage private var bg: String?
+    @AppStorage private var fg: String?
+    @AppStorage private var hidden: Bool
+
+    init(source: InputSourceInfo, name: Name, style: BadgeView, langBg: Binding<String>, langFg: Binding<String>,
+         ownColors: Bool, showColors: Bool, menu: Menu) {
+        self.source = source
+        self.name = name
+        self.style = style
+        _langBg = langBg
+        _langFg = langFg
+        self.ownColors = ownColors
+        self.showColors = showColors
+        self.menu = menu
+        _label = AppStorage(wrappedValue: defaultLabel(source), K.modeLabel(source.id))
+        _bg = AppStorage(K.modeBg(source.id))
+        _fg = AppStorage(K.modeFg(source.id))
+        _hidden = AppStorage(wrappedValue: UserDefaults.standard.bool(forKey: K.hidden(source.lang)),
+                             K.modeHidden(source.id))
+    }
+
+    var body: some View {
+        LanguageColumns(
+            name: name,
+            label: TextField("표시 글자", text: $label).labelsHidden().roundedInputBorder(),
+            bg: Group { if showColors { colorWell("배경", bgColor) } },
+            fg: Group { if showColors { colorWell("글자", fgColor) } },
+            hidden: Toggle("숨기기", isOn: $hidden).labelsHidden(),
+            preview: preview,
+            menu: menu
+        )
+        .frame(height: LanguageDropDelegate.rowHeight)
+    }
+
+    private var bgColor: Binding<String> {
+        ownColors ? Binding(get: { bg ?? langBg }, set: { bg = $0 }) : $langBg
+    }
+
+    private var fgColor: Binding<String> {
+        ownColors ? Binding(get: { fg ?? langFg }, set: { fg = $0 }) : $langFg
+    }
 
     private var preview: BadgeView {
         var badge = style
         badge.label = label
-        badge.bg = Color(hex: bg)
-        badge.fg = Color(hex: fg)
+        badge.bg = Color(hex: bgColor.wrappedValue)
+        badge.fg = Color(hex: fgColor.wrappedValue)
         if hidden { badge.opacity = 0.2 }
         return badge
     }
+}
 
-    private func color(_ hex: Binding<String>) -> Binding<Color> {
-        Binding(get: { Color(hex: hex.wrappedValue) }, set: { hex.wrappedValue = $0.hex })
-    }
+func colorWell(_ title: LocalizedStringKey, _ hex: Binding<String>) -> some View {
+    ColorPicker(title, selection: Binding(get: { Color(hex: hex.wrappedValue) }, set: { hex.wrappedValue = $0.hex }),
+                supportsOpacity: false)
+        .labelsHidden()
 }
 
 extension View {

@@ -67,15 +67,15 @@ struct BadgeView: View {
 }
 
 extension BadgeView {
-    init(lang: String, scope: String) {
+    init(source: InputSourceInfo, scope: String) {
         let d = UserDefaults.standard
-        let l = langDefaults(lang)
+        let look = badgeLook(source)
         func key(_ name: String) -> String { K.style(scope, name) }
         let badgeSize = d.double(forKey: key(K.badgeSize))
         let glass = d.bool(forKey: key(K.glass))
-        self.init(label: d.string(forKey: K.label(lang)) ?? l.label,
-                  bg: Color(hex: d.string(forKey: K.bg(lang)) ?? l.bg),
-                  fg: Color(hex: d.string(forKey: K.fg(lang)) ?? l.fg),
+        self.init(label: look.label,
+                  bg: Color(hex: look.bg),
+                  fg: Color(hex: look.fg),
                   shape: d.string(forKey: key(K.shape)) ?? "",
                   fontSize: d.double(forKey: key(K.fontSize)),
                   badgeSize: badgeSize,
@@ -141,11 +141,11 @@ final class Overlay {
 
     func update() {
         let d = UserDefaults.standard
-        let lang = currentLanguage()
+        let source = currentInputSource()
         let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
         let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
             || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
-        let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
+        let visible = d.bool(forKey: K.visible) && !badgeLook(source).hidden && appAllowed
         func shows(_ mode: String) -> Bool {
             visible && d.bool(forKey: K.show(mode))
                 && (flashing.contains(mode) || !d.bool(forKey: K.style(styleScope(mode), K.flashOnly)))
@@ -154,7 +154,7 @@ final class Overlay {
         let showFixed = shows("fixed")
         fixedFollowsMouse = showFixed && d.string(forKey: K.displayMode) == "mouse"
         let screens = showFixed ? targetScreens() : []
-        let fixed = BadgeView(lang: lang, scope: styleScope("fixed"))
+        let fixed = BadgeView(source: source, scope: styleScope("fixed"))
         while fixedPanels.count < screens.count { fixedPanels.append(makePanel(follow: false)) }
         for (i, panel) in fixedPanels.enumerated() {
             guard i < screens.count else { panel.orderOut(nil); continue }
@@ -163,7 +163,7 @@ final class Overlay {
             panel.orderFrontRegardless()
         }
 
-        pointerSize = shows("pointer") ? place(BadgeView(lang: lang, scope: styleScope("pointer")), in: pointerPanel) : nil
+        pointerSize = shows("pointer") ? place(BadgeView(source: source, scope: styleScope("pointer")), in: pointerPanel) : nil
         if let size = pointerSize {
             put(pointerPanel, at: pointerOrigin(for: size), size: size)
             pointerPanel.orderFrontRegardless()
@@ -173,7 +173,7 @@ final class Overlay {
 
         caretFallback = d.bool(forKey: K.caretFallback)
         caretGeneration += 1
-        caretSize = shows("caret") ? place(BadgeView(lang: lang, scope: styleScope("caret")), in: caretPanel) : nil
+        caretSize = shows("caret") ? place(BadgeView(source: source, scope: styleScope("caret")), in: caretPanel) : nil
         if caretSize == nil {
             caretPanel.orderOut(nil)
             caretTimer?.invalidate()
@@ -366,7 +366,7 @@ final class Overlay {
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.ignoresMouseEvents = follow
-        let host = BadgeHost(rootView: BadgeView(lang: "", scope: "default"))
+        let host = BadgeHost(rootView: BadgeView(source: .none, scope: "default"))
         host.menu = contextMenu
         host.onDrop = { [weak self, weak panel] in
             if let self, let panel { self.savePosition(of: panel) }

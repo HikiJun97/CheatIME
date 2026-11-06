@@ -50,6 +50,11 @@ enum K {
     static func bg(_ lang: String) -> String { "lang.\(lang).bg" }
     static func fg(_ lang: String) -> String { "lang.\(lang).fg" }
     static func hidden(_ lang: String) -> String { "lang.\(lang).hidden" }
+    static func modeColors(_ lang: String) -> String { "lang.\(lang).modeColors" }
+    static func modeLabel(_ id: String) -> String { "mode.\(id).label" }
+    static func modeBg(_ id: String) -> String { "mode.\(id).bg" }
+    static func modeFg(_ id: String) -> String { "mode.\(id).fg" }
+    static func modeHidden(_ id: String) -> String { "mode.\(id).hidden" }
 }
 
 func registerDefaults() {
@@ -86,6 +91,23 @@ func langDefaults(_ lang: String) -> (label: String, bg: String, fg: String) {
     case "en": return ("EN", "#404040", "#FFFFFF")
     default: return (String(lang.prefix { $0 != "-" }).uppercased(), "#808080", "#FFFFFF")
     }
+}
+
+func defaultLabel(_ source: InputSourceInfo) -> String {
+    UserDefaults.standard.string(forKey: K.label(source.lang))
+        ?? systemLabels[source.mode] ?? langDefaults(source.lang).label
+}
+
+func badgeLook(_ source: InputSourceInfo) -> (label: String, bg: String, fg: String, hidden: Bool) {
+    let d = UserDefaults.standard
+    let l = langDefaults(source.lang)
+    let bg = d.string(forKey: K.bg(source.lang)) ?? l.bg
+    let fg = d.string(forKey: K.fg(source.lang)) ?? l.fg
+    let own = d.bool(forKey: K.modeColors(source.lang))
+    return (d.string(forKey: K.modeLabel(source.id)) ?? defaultLabel(source),
+            own ? d.string(forKey: K.modeBg(source.id)) ?? bg : bg,
+            own ? d.string(forKey: K.modeFg(source.id)) ?? fg : fg,
+            d.object(forKey: K.modeHidden(source.id)) as? Bool ?? d.bool(forKey: K.hidden(source.lang)))
 }
 
 extension Color {

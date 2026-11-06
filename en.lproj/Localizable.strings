@@ -6,7 +6,10 @@
 "모든 디스플레이" = "All displays";
 "마우스가 있는 디스플레이" = "Display with the pointer";
 "직접 선택" = "Choose displays";
-"언어별 표시" = "Per-language look";
+"입력 모드별 표시" = "Per-input-mode look";
+"언어 / 입력 모드" = "Language / Input Mode";
+"입력 모드마다 다른 색 쓰기" = "Use Different Colors per Input Mode";
+"모드별 색" = "Per-mode colors";
 "표시 글자" = "Label";
 "배경" = "Fill";
 "글자" = "Text";
