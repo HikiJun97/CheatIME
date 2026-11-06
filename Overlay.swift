@@ -2,12 +2,16 @@ import SwiftUI
 
 struct BadgeView: View {
     var label: String
+    var region: String?
+    var content = "text"
     var bg: Color
     var fg: Color
     var shape: String
     var fontSize: Double
     var badgeSize: Double
     var dotSize: Double
+    var badgeWidth = 0.0
+    var cornerRadius = 22.0
     var opacity: Double
     var glass: Bool
     var border = "none"
@@ -18,30 +22,47 @@ struct BadgeView: View {
     var body: some View {
         let isDot = shape == "dot"
         let h = isDot ? dotSize : badgeSize
+        let shapeWidth: CGFloat? = shape == "circle" || isDot ? h : shape == "custom" && badgeWidth > 0 ? badgeWidth : nil
+        let flag = content == "flag"
+            ? region.flatMap { flagImage($0, square: (shapeWidth ?? .infinity) < h * 1.17) } : nil
+        let fixedWidth = flag == nil ? shapeWidth : shapeWidth ?? (h * 4 / 3).rounded()
         let padding = switch shape {
+        case _ where flag != nil: 0.0
         case "circle", "dot": 0.0
-        case "capsule": h * 0.39
-        default: h * 0.28
+        case "capsule": (h * 0.39).rounded()
+        case "custom": min((h * (0.2 + 0.38 * radius)).rounded(), max(0, (((fixedWidth ?? .infinity) - h) / 2).rounded(.down)))
+        default: (h * 0.28).rounded()
         }
         let dash: [CGFloat] = switch border {
         case "dashed": [borderWidth * 3, borderWidth * 2]
         case "dotted": [0, borderWidth * 2]
         default: []
         }
-        let text = Text(isDot ? "" : label)
+        let ink = inkBounds()
+        let text = Text(isDot || flag != nil ? "" : label)
             .font(.system(size: fontSize, weight: .bold))
             .foregroundStyle(fg)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
+            .alignmentGuide(.inkCenter) { $0[.firstTextBaseline] - ink.midY * min(1, $0.width / ink.width) }
+            .frame(height: h, alignment: Alignment(horizontal: .center, vertical: .inkCenter))
+            .visualEffect { content, proxy in
+                content.offset(x: proxy.size.width / 2 - ink.midX * min(1, proxy.size.width / ink.width))
+            }
             .padding(.horizontal, padding)
-            .frame(width: shape == "circle" || isDot ? h : nil)
-            .frame(minWidth: h)
-            .frame(height: h)
+            .frame(width: fixedWidth)
+            .frame(minWidth: fixedWidth == nil ? h : nil)
         Group {
-            if glass, #available(macOS 26, *) {
+            if glass, flag == nil, #available(macOS 26, *) {
                 text.glassEffect(.regular.tint(bg), in: outline())
             } else {
-                text.background(bg, in: outline())
+                text.background {
+                        if border != "solid" {
+                            fill(flag)
+                        } else {
+                            fill(flag, inset: borderWidth / 2).padding(borderWidth / 2)
+                        }
+                    }
                     .overlay {
                         if border != "none" {
                             outline(inset: borderWidth / 2)
@@ -57,29 +78,66 @@ struct BadgeView: View {
         .fixedSize()
     }
 
+    @ViewBuilder
+    private func fill(_ flag: NSImage?, inset: Double = 0) -> some View {
+        if let flag {
+            Color.clear
+                .overlay { Image(nsImage: flag).resizable().interpolation(.high).scaledToFill() }
+                .clipShape(outline(inset: inset))
+        } else {
+            outline(inset: inset).fill(bg)
+        }
+    }
+
+    private var radius: Double { min(max(cornerRadius, 0), 50) / 100 }
+
+    private func inkBounds() -> (midX: CGFloat, midY: CGFloat, width: CGFloat) {
+        guard !label.isEmpty, shape != "dot" else { return (0.5, 0, 1) }
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: label, attributes: [.font: font]))
+        let width = CTLineGetTypographicBounds(line, nil, nil, nil)
+        let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        return (bounds.midX, bounds.midY, max(width, 1))
+    }
+
     private func outline(inset: Double = 0) -> AnyShape {
         switch shape {
         case "circle", "dot": AnyShape(Circle())
         case "capsule": AnyShape(Capsule(style: .circular))
+        case "custom":
+            AnyShape(RoundedRectangle(cornerRadius: max(0, badgeSize * radius - inset),
+                                      style: radius >= 0.5 ? .circular : .continuous))
         default: AnyShape(RoundedRectangle(cornerRadius: max(0, badgeSize * 0.22 - inset)))
         }
     }
 }
 
+private enum InkCenter: AlignmentID {
+    static func defaultValue(in d: ViewDimensions) -> CGFloat { d[VerticalAlignment.center] }
+}
+
+extension VerticalAlignment {
+    static let inkCenter = VerticalAlignment(InkCenter.self)
+}
+
 extension BadgeView {
-    init(lang: String, scope: String) {
+    init(source: InputSourceInfo, scope: String) {
         let d = UserDefaults.standard
-        let l = langDefaults(lang)
+        let look = badgeLook(source)
         func key(_ name: String) -> String { K.style(scope, name) }
         let badgeSize = d.double(forKey: key(K.badgeSize))
         let glass = d.bool(forKey: key(K.glass))
-        self.init(label: d.string(forKey: K.label(lang)) ?? l.label,
-                  bg: Color(hex: d.string(forKey: K.bg(lang)) ?? l.bg),
-                  fg: Color(hex: d.string(forKey: K.fg(lang)) ?? l.fg),
+        self.init(label: look.label,
+                  region: modeRegion(source),
+                  content: d.string(forKey: key(K.content)) ?? "text",
+                  bg: Color(hex: look.bg),
+                  fg: Color(hex: look.fg),
                   shape: d.string(forKey: key(K.shape)) ?? "",
                   fontSize: d.double(forKey: key(K.fontSize)),
                   badgeSize: badgeSize,
                   dotSize: d.double(forKey: key(K.dotSize)),
+                  badgeWidth: d.double(forKey: key(K.badgeWidth)),
+                  cornerRadius: d.double(forKey: key(K.cornerRadius)),
                   opacity: d.double(forKey: key(K.opacity)),
                   glass: glass,
                   border: d.string(forKey: key(K.border)) ?? "none",
@@ -141,11 +199,11 @@ final class Overlay {
 
     func update() {
         let d = UserDefaults.standard
-        let lang = currentLanguage()
+        let source = currentInputSource()
         let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
         let appAllowed = !d.bool(forKey: K.appFilter) || front == Bundle.main.bundleIdentifier
             || (d.string(forKey: K.filterApps) ?? "").split(separator: ",").contains(Substring(front))
-        let visible = d.bool(forKey: K.visible) && !d.bool(forKey: K.hidden(lang)) && appAllowed
+        let visible = d.bool(forKey: K.visible) && !badgeLook(source).hidden && appAllowed
         func shows(_ mode: String) -> Bool {
             visible && d.bool(forKey: K.show(mode))
                 && (flashing.contains(mode) || !d.bool(forKey: K.style(styleScope(mode), K.flashOnly)))
@@ -154,7 +212,7 @@ final class Overlay {
         let showFixed = shows("fixed")
         fixedFollowsMouse = showFixed && d.string(forKey: K.displayMode) == "mouse"
         let screens = showFixed ? targetScreens() : []
-        let fixed = BadgeView(lang: lang, scope: styleScope("fixed"))
+        let fixed = BadgeView(source: source, scope: styleScope("fixed"))
         while fixedPanels.count < screens.count { fixedPanels.append(makePanel(follow: false)) }
         for (i, panel) in fixedPanels.enumerated() {
             guard i < screens.count else { panel.orderOut(nil); continue }
@@ -163,7 +221,7 @@ final class Overlay {
             panel.orderFrontRegardless()
         }
 
-        pointerSize = shows("pointer") ? place(BadgeView(lang: lang, scope: styleScope("pointer")), in: pointerPanel) : nil
+        pointerSize = shows("pointer") ? place(BadgeView(source: source, scope: styleScope("pointer")), in: pointerPanel) : nil
         if let size = pointerSize {
             put(pointerPanel, at: pointerOrigin(for: size), size: size)
             pointerPanel.orderFrontRegardless()
@@ -173,7 +231,7 @@ final class Overlay {
 
         caretFallback = d.bool(forKey: K.caretFallback)
         caretGeneration += 1
-        caretSize = shows("caret") ? place(BadgeView(lang: lang, scope: styleScope("caret")), in: caretPanel) : nil
+        caretSize = shows("caret") ? place(BadgeView(source: source, scope: styleScope("caret")), in: caretPanel) : nil
         if caretSize == nil {
             caretPanel.orderOut(nil)
             caretTimer?.invalidate()
@@ -254,8 +312,7 @@ final class Overlay {
         }
         guard let size = caretSize else { return }
         if let bounds, let caret = caretRect(from: bounds) {
-            let p = NSPoint(x: caret.maxX + 6, y: caret.midY - size.height / 2)
-            put(caretPanel, at: clamped(p, size: size, near: caret.origin), size: size)
+            put(caretPanel, at: origin("caret", around: caret, size: size), size: size)
         } else if pointerSize != nil || !caretFallback {
             caretPanel.orderOut(nil)
             return
@@ -285,13 +342,31 @@ final class Overlay {
     }
 
     private func pointerOrigin(for size: NSSize) -> NSPoint {
-        let mouse = NSEvent.mouseLocation
-        return clamped(NSPoint(x: mouse.x + 16, y: mouse.y - 16 - size.height), size: size, near: mouse)
+        origin("pointer", around: NSRect(origin: NSEvent.mouseLocation, size: .zero), size: size)
+    }
+
+    private func origin(_ mode: String, around anchor: NSRect, size: NSSize) -> NSPoint {
+        let placement = Placement(mode: mode)
+        var p = placement.origin(around: anchor, size: size)
+        if placement.flip, let v = screen(containing: anchor.origin)?.visibleFrame {
+            var opposite = placement
+            opposite.h = -placement.h
+            opposite.v = -placement.v
+            let q = opposite.origin(around: anchor, size: size)
+            let outX = { (x: CGFloat) in x < v.minX || x + size.width > v.maxX }
+            let outY = { (y: CGFloat) in y < v.minY || y + size.height > v.maxY }
+            if outX(p.x) && !outX(q.x) { p.x = q.x }
+            if outY(p.y) && !outY(q.y) { p.y = q.y }
+        }
+        return clamped(p, size: size, near: anchor.origin)
+    }
+
+    private func screen(containing p: NSPoint) -> NSScreen? {
+        NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens.first
     }
 
     private func clamped(_ p: NSPoint, size: NSSize, near anchor: NSPoint) -> NSPoint {
-        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(anchor, $0.frame, false) }) ?? NSScreen.screens.first
-        else { return p }
+        guard let screen = screen(containing: anchor) else { return p }
         let v = screen.visibleFrame
         return NSPoint(x: min(max(p.x, v.minX), v.maxX - size.width), y: min(max(p.y, v.minY), v.maxY - size.height))
     }
@@ -306,8 +381,7 @@ final class Overlay {
     }
 
     private func screenUnderMouse() -> NSScreen? {
-        let p = NSEvent.mouseLocation
-        return NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens.first
+        screen(containing: NSEvent.mouseLocation)
     }
 
     private func targetScreens() -> [NSScreen] {
@@ -366,7 +440,7 @@ final class Overlay {
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.ignoresMouseEvents = follow
-        let host = BadgeHost(rootView: BadgeView(lang: "", scope: "default"))
+        let host = BadgeHost(rootView: BadgeView(source: .none, scope: "default"))
         host.menu = contextMenu
         host.onDrop = { [weak self, weak panel] in
             if let self, let panel { self.savePosition(of: panel) }

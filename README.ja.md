@@ -63,3 +63,4 @@ make dist       # dist/ に DMG と ZIP を作成
 [MIT](LICENSE)
 
 アップデートには [Sparkle](https://sparkle-project.org) を使っています。Sparkle のライセンスはアプリに同梱しています。
+国旗の画像は [flag-icons](https://github.com/lipis/flag-icons)（MIT）のもので、ライセンスはアプリに同梱しています。

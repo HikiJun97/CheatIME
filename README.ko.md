@@ -63,3 +63,4 @@ make dist       # dist/에 DMG와 ZIP 만들기
 [MIT](LICENSE)
 
 업데이트에는 [Sparkle](https://sparkle-project.org)을 쓰며, Sparkle의 라이선스는 앱에 함께 들어 있습니다.
+국기 이미지는 [flag-icons](https://github.com/lipis/flag-icons)(MIT)에서 가져왔으며, 라이선스는 앱에 함께 들어 있습니다.

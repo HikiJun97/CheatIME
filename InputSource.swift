@@ -6,16 +6,24 @@ func property<T>(_ src: TISInputSource, _ key: CFString) -> T? {
     return Unmanaged<AnyObject>.fromOpaque(ptr).takeUnretainedValue() as? T
 }
 
-func currentLanguage() -> String {
-    let src = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
-    let langs: [String] = property(src, kTISPropertyInputSourceLanguages) ?? []
-    return langs.first ?? ""
-}
-
 struct InputSourceInfo: Hashable {
     let id: String
     let name: String
     let lang: String
+    var mode = ""
+
+    static let none = InputSourceInfo(id: "", name: "", lang: "")
+}
+
+func sourceInfo(_ src: TISInputSource) -> InputSourceInfo? {
+    guard let id: String = property(src, kTISPropertyInputSourceID) else { return nil }
+    let langs: [String] = property(src, kTISPropertyInputSourceLanguages) ?? []
+    return InputSourceInfo(id: id, name: property(src, kTISPropertyLocalizedName) ?? id, lang: langs.first ?? "",
+                           mode: property(src, kTISPropertyInputModeID) ?? "")
+}
+
+func currentInputSource() -> InputSourceInfo {
+    sourceInfo(TISCopyCurrentKeyboardInputSource().takeRetainedValue()) ?? .none
 }
 
 func enabledInputSources() -> [InputSourceInfo] {
@@ -23,12 +31,30 @@ func enabledInputSources() -> [InputSourceInfo] {
     return list.compactMap { src in
         let category: String? = property(src, kTISPropertyInputSourceCategory)
         let selectable: Bool = property(src, kTISPropertyInputSourceIsSelectCapable) ?? false
-        guard category == kTISCategoryKeyboardInputSource as String, selectable,
-              let id: String = property(src, kTISPropertyInputSourceID) else { return nil }
-        let langs: [String] = property(src, kTISPropertyInputSourceLanguages) ?? []
-        return InputSourceInfo(id: id, name: property(src, kTISPropertyLocalizedName) ?? id, lang: langs.first ?? "")
+        guard category == kTISCategoryKeyboardInputSource as String, selectable else { return nil }
+        return sourceInfo(src)
     }
 }
+
+let systemLabels: [String: String] = {
+    let fm = FileManager.default
+    var labels: [String: String] = [:]
+    for dir in ["/System/Library/Input Methods", "/Library/Input Methods", NSHomeDirectory() + "/Library/Input Methods"] {
+        for app in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] {
+            let contents = "\(dir)/\(app)/Contents"
+            let plugins = (try? fm.contentsOfDirectory(atPath: contents + "/PlugIns")) ?? []
+            for path in [contents] + plugins.map({ "\(contents)/PlugIns/\($0)/Contents" }) {
+                let plist = NSDictionary(contentsOfFile: path + "/Info.plist")
+                let modes = (plist?["ComponentInputModeDict"] as? [String: Any])?["tsInputModeListKey"] as? [String: Any]
+                for (mode, value) in modes ?? [:] {
+                    let icon = (value as? [String: Any])?["TISIconLabels"] as? [String: Any]
+                    if let label = icon?["Primary"] as? String { labels[mode] = label }
+                }
+            }
+        }
+    }
+    return labels
+}()
 
 func badgeLanguages() -> [String] {
     (UserDefaults.standard.string(forKey: K.badgeLanguages) ?? "").split(separator: ",").map(String.init)

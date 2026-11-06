@@ -63,3 +63,4 @@ make dist       # create the DMG and ZIP in dist/
 [MIT](LICENSE)
 
 Updates use [Sparkle](https://sparkle-project.org); its license is included in the app.
+Flag images come from [flag-icons](https://github.com/lipis/flag-icons) (MIT); its license is included in the app.

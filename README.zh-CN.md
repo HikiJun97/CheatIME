@@ -65,3 +65,4 @@ make dist       # 在 dist/ 中生成 DMG 和 ZIP
 [MIT](LICENSE)
 
 更新功能使用 [Sparkle](https://sparkle-project.org)，其许可证随应用一同提供。
+国旗图片来自 [flag-icons](https://github.com/lipis/flag-icons)（MIT），其许可证随应用一同提供。

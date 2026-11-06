@@ -71,10 +71,26 @@ final class AppLanguage: ObservableObject {
     }
 }
 
+final class SettingsFileState: ObservableObject {
+    @Published var message: String?
+    @Published var failed = false
+
+    func run(_ action: () throws -> String?) {
+        do {
+            message = try action()
+            failed = false
+        } catch {
+            message = error.localizedDescription
+            failed = true
+        }
+    }
+}
+
 struct GeneralTab: View {
     @StateObject private var login = LoginItem()
     @StateObject private var language = AppLanguage()
     @ObservedObject private var updates = Updates.shared
+    @StateObject private var settingsFile = SettingsFileState()
 
     private let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-"
 
@@ -112,6 +128,19 @@ struct GeneralTab: View {
                     if let error = language.relaunchError {
                         Text(error).foregroundStyle(.red)
                     }
+                }
+            }
+            Section {
+                LabeledContent("설정 파일") {
+                    HStack {
+                        Button("내보내기…") { settingsFile.run { try SettingsFile.export() ? String(localized: "설정을 내보냈습니다.") : nil } }
+                        Button("가져오기…") {
+                            settingsFile.run { try SettingsFile.import() ? String(localized: "설정을 가져왔습니다.") : nil }
+                        }
+                    }
+                }
+                if let message = settingsFile.message {
+                    Text(message).foregroundStyle(settingsFile.failed ? .red : .secondary)
                 }
             }
             Section {
