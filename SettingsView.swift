@@ -335,8 +335,6 @@ struct CaretSection: View {
                 .disabled(showPointer)
             Text("포인터 옆에 대신 띄울 때는 마우스 포인터 옆 뱃지보다 덜 부드럽게 움직입니다.")
                 .foregroundStyle(.secondary)
-            Text("마우스 포인터 옆이 켜져 있으면 겹치지 않도록 표시하지 않습니다.")
-                .foregroundStyle(.secondary)
         }
     }
 }
