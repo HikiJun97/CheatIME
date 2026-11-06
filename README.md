@@ -43,7 +43,7 @@ macOS 15 or later, Apple silicon or Intel.
 
 ## Build from source
 
-Requires the macOS 27 SDK (Xcode or the Command Line Tools). The first build downloads the Sparkle framework.
+Requires the macOS 27 SDK (Xcode or the Command Line Tools). The first build downloads the Sparkle framework. `make dist` also needs [dmgbuild](https://github.com/dmgbuild/dmgbuild) (`uv tool install dmgbuild==1.6.7`).
 
 ```sh
 git clone https://github.com/HikiJun97/CheatIME.git
