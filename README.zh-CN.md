@@ -45,7 +45,7 @@ macOS 15 及以上，Apple 芯片或 Intel 芯片的 Mac
 
 ## 从源码构建
 
-需要 macOS 27 SDK（Xcode 或 Command Line Tools）。首次构建时会下载 Sparkle 框架。
+需要 macOS 27 SDK（Xcode 或 Command Line Tools）。首次构建时会下载 Sparkle 框架。`make dist` 还需要 [dmgbuild](https://github.com/dmgbuild/dmgbuild)（`uv tool install dmgbuild==1.6.7`）。
 
 ```sh
 git clone https://github.com/HikiJun97/CheatIME.git

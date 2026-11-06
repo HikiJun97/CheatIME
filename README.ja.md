@@ -43,7 +43,7 @@ macOS 15 以降、Apple シリコンまたは Intel Mac
 
 ## ソースからビルド
 
-macOS 27 SDK（Xcode または Command Line Tools）が必要です。初回のビルド時に Sparkle フレームワークをダウンロードします。
+macOS 27 SDK（Xcode または Command Line Tools）が必要です。初回のビルド時に Sparkle フレームワークをダウンロードします。`make dist` には [dmgbuild](https://github.com/dmgbuild/dmgbuild) も必要です（`uv tool install dmgbuild==1.6.7`）。
 
 ```sh
 git clone https://github.com/HikiJun97/CheatIME.git

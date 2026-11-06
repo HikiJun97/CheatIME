@@ -1,7 +1,6 @@
 format = 'UDZO'
 files = ['CheatIME.app']
 symlinks = {'Applications': '/Applications'}
-hide_extensions = ['CheatIME.app']
 icon = 'Resources/CheatIME.icns'
 background = 'dmg/background.png'
 
