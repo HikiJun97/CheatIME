@@ -2,6 +2,8 @@ import SwiftUI
 
 struct BadgeView: View {
     var label: String
+    var region: String?
+    var content = "text"
     var bg: Color
     var fg: Color
     var shape: String
@@ -20,8 +22,12 @@ struct BadgeView: View {
     var body: some View {
         let isDot = shape == "dot"
         let h = isDot ? dotSize : badgeSize
-        let fixedWidth: CGFloat? = shape == "circle" || isDot ? h : shape == "custom" && badgeWidth > 0 ? badgeWidth : nil
+        let shapeWidth: CGFloat? = shape == "circle" || isDot ? h : shape == "custom" && badgeWidth > 0 ? badgeWidth : nil
+        let flag = content == "flag"
+            ? region.flatMap { flagImage($0, square: (shapeWidth ?? .infinity) < h * 1.17) } : nil
+        let fixedWidth = flag == nil ? shapeWidth : shapeWidth ?? (h * 4 / 3).rounded()
         let padding = switch shape {
+        case _ where flag != nil: 0.0
         case "circle", "dot": 0.0
         case "capsule": (h * 0.39).rounded()
         case "custom": min((h * (0.2 + 0.38 * radius)).rounded(), max(0, (((fixedWidth ?? .infinity) - h) / 2).rounded(.down)))
@@ -33,7 +39,7 @@ struct BadgeView: View {
         default: []
         }
         let ink = inkBounds()
-        let text = Text(isDot ? "" : label)
+        let text = Text(isDot || flag != nil ? "" : label)
             .font(.system(size: fontSize, weight: .bold))
             .foregroundStyle(fg)
             .lineLimit(1)
@@ -47,14 +53,14 @@ struct BadgeView: View {
             .frame(width: fixedWidth)
             .frame(minWidth: fixedWidth == nil ? h : nil)
         Group {
-            if glass, #available(macOS 26, *) {
+            if glass, flag == nil, #available(macOS 26, *) {
                 text.glassEffect(.regular.tint(bg), in: outline())
             } else {
                 text.background {
                         if border != "solid" {
-                            outline().fill(bg)
+                            fill(flag)
                         } else {
-                            outline(inset: borderWidth / 2).fill(bg).padding(borderWidth / 2)
+                            fill(flag, inset: borderWidth / 2).padding(borderWidth / 2)
                         }
                     }
                     .overlay {
@@ -70,6 +76,17 @@ struct BadgeView: View {
         .opacity(opacity)
         .padding(inset)
         .fixedSize()
+    }
+
+    @ViewBuilder
+    private func fill(_ flag: NSImage?, inset: Double = 0) -> some View {
+        if let flag {
+            Color.clear
+                .overlay { Image(nsImage: flag).resizable().interpolation(.high).scaledToFill() }
+                .clipShape(outline(inset: inset))
+        } else {
+            outline(inset: inset).fill(bg)
+        }
     }
 
     private var radius: Double { min(max(cornerRadius, 0), 50) / 100 }
@@ -111,6 +128,8 @@ extension BadgeView {
         let badgeSize = d.double(forKey: key(K.badgeSize))
         let glass = d.bool(forKey: key(K.glass))
         self.init(label: look.label,
+                  region: modeRegion(source),
+                  content: d.string(forKey: key(K.content)) ?? "text",
                   bg: Color(hex: look.bg),
                   fg: Color(hex: look.fg),
                   shape: d.string(forKey: key(K.shape)) ?? "",

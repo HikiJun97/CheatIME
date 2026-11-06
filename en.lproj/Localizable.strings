@@ -119,3 +119,8 @@
 "가져오기" = "Import";
 "취소" = "Cancel";
 "CheatIME 설정 파일이 아닙니다." = "This is not a CheatIME settings file.";
+"표시 내용" = "Content";
+"국기" = "Flag";
+"폭을 국기 비율에 맞추기" = "Fit Width to Flag Ratio";
+"입력 모드마다 쓸 국기는 기본값 탭에서 고릅니다." = "Choose the flag for each input mode in the Defaults tab.";
+"자동" = "Automatic";

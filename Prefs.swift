@@ -12,6 +12,7 @@ enum K {
     static let dotSize = "dotSize"
     static let badgeWidth = "badgeWidth"
     static let cornerRadius = "cornerRadius"
+    static let content = "content"
     static let border = "border"
     static let borderWidth = "borderWidth"
     static let borderColor = "borderColor"
@@ -38,7 +39,7 @@ enum K {
     static let toggleKey = "toggleKey"
     static let toggleModifiers = "toggleModifiers"
     static let modes = ["fixed", "pointer", "caret"]
-    static let styleKeys = [shape, fontSize, badgeSize, dotSize, badgeWidth, cornerRadius, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
+    static let styleKeys = [content, shape, fontSize, badgeSize, dotSize, badgeWidth, cornerRadius, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
     static func style(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
     static func useDefault(_ mode: String) -> String { "\(mode).useDefault" }
     static func show(_ mode: String) -> String {
@@ -61,6 +62,7 @@ enum K {
     static func modeBg(_ id: String) -> String { "mode.\(id).bg" }
     static func modeFg(_ id: String) -> String { "mode.\(id).fg" }
     static func modeHidden(_ id: String) -> String { "mode.\(id).hidden" }
+    static func modeFlag(_ id: String) -> String { "mode.\(id).flag" }
 }
 
 func registerDefaults() {
@@ -75,7 +77,7 @@ func registerDefaults() {
         K.direction("caret"): "right", K.gapX("caret"): 6.0, K.gapY("caret"): 6.0, K.flip("caret"): false,
     ]
     let style: [String: Any] = [
-        K.shape: "rounded", K.fontSize: 16.0, K.badgeSize: 29.0, K.dotSize: 12.0, K.badgeWidth: 0.0, K.cornerRadius: 22.0, K.opacity: 0.9, K.glass: false,
+        K.content: "text", K.shape: "rounded", K.fontSize: 16.0, K.badgeSize: 29.0, K.dotSize: 12.0, K.badgeWidth: 0.0, K.cornerRadius: 22.0, K.opacity: 0.9, K.glass: false,
         K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF", K.flashOnly: false, K.flashDuration: 1200.0,
     ]
     let migrateBadgeSize = !d.bool(forKey: K.badgeSizeMigrated)
@@ -118,6 +120,35 @@ func badgeLook(_ source: InputSourceInfo) -> (label: String, bg: String, fg: Str
             own ? d.string(forKey: K.modeFg(source.id)) ?? fg : fg,
             d.object(forKey: K.modeHidden(source.id)) as? Bool ?? d.bool(forKey: K.hidden(source.lang)))
 }
+
+func defaultRegion(_ lang: String) -> String? {
+    let region = Locale(identifier: Locale.Language(identifier: lang).maximalIdentifier).region?.identifier
+    return region.flatMap { flagFile($0, square: false) == nil ? nil : $0 }
+}
+
+func modeRegion(_ source: InputSourceInfo) -> String? {
+    UserDefaults.standard.string(forKey: K.modeFlag(source.id)) ?? defaultRegion(source.lang)
+}
+
+private func flagFile(_ region: String, square: Bool) -> URL? {
+    Bundle.main.url(forResource: region.lowercased(), withExtension: "png", subdirectory: square ? "flags/1x1" : "flags/4x3")
+}
+
+private var flagImages: [String: NSImage] = [:]
+
+func flagImage(_ region: String, square: Bool = false, icon: Bool = false) -> NSImage? {
+    let key = "\(region.lowercased()) \(square) \(icon)"
+    if let image = flagImages[key] { return image }
+    guard let url = flagFile(region, square: square), let image = NSImage(contentsOf: url) else { return nil }
+    if icon { image.size = NSSize(width: 20, height: 15) }
+    flagImages[key] = image
+    return image
+}
+
+let flagRegions: [(code: String, name: String)] = Locale.Region.isoRegions
+    .filter { flagFile($0.identifier, square: false) != nil }
+    .map { ($0.identifier, Locale.current.localizedString(forRegionCode: $0.identifier) ?? $0.identifier) }
+    .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
 extension Color {
     init(hex: String) {

@@ -195,6 +195,7 @@ struct PositionSections: View {
 
 struct StyleSections: View {
     let scope: String
+    @AppStorage private var content: String
     @AppStorage private var shape: String
     @AppStorage private var fontSize: Double
     @AppStorage private var badgeSize: Double
@@ -217,6 +218,7 @@ struct StyleSections: View {
     init(scope: String) {
         self.scope = scope
         func key(_ name: String) -> String { K.style(scope, name) }
+        _content = AppStorage(wrappedValue: "text", key(K.content))
         _shape = AppStorage(wrappedValue: "rounded", key(K.shape))
         _fontSize = AppStorage(wrappedValue: 16.0, key(K.fontSize))
         _badgeSize = AppStorage(wrappedValue: 29.0, key(K.badgeSize))
@@ -235,7 +237,7 @@ struct StyleSections: View {
             Section("입력 모드별 표시") {
                 VStack(spacing: 0) {
                     LanguageColumns(
-                        name: Text("언어 / 입력 모드"), label: Text("표시 글자"), bg: Text("배경"), fg: Text("글자"),
+                        name: Text("언어 / 입력 모드"), label: Text(content == "flag" ? "국기" : "표시 글자"), bg: Text("배경"), fg: Text("글자"),
                         hidden: Text("숨기기"), preview: Text("미리보기"), menu: Color.clear
                     )
                     .font(.caption)
@@ -258,6 +260,15 @@ struct StyleSections: View {
                     ForEach(languages.flatMap(modes), id: \.id) { preview($0) }
                 }
             }
+            Picker("표시 내용", selection: $content) {
+                Text("글자").tag("text")
+                Text("국기").tag("flag")
+            }
+            .pickerStyle(.segmented)
+            if content == "flag" && scope != "default" {
+                Text("입력 모드마다 쓸 국기는 기본값 탭에서 고릅니다.")
+                    .foregroundStyle(.secondary)
+            }
             Picker("모양", selection: shapeChoice) {
                 Text("둥근 사각형").tag("rounded")
                 Text("캡슐").tag("capsule")
@@ -266,27 +277,28 @@ struct StyleSections: View {
                 Text("직접 설정").tag("custom")
             }
             .pickerStyle(.segmented)
-            if #available(macOS 26, *) {
+            if content != "flag", #available(macOS 26, *) {
                 Toggle("유리 효과 (Liquid Glass)", isOn: $glass)
             }
             if shape == "dot" {
                 NumberSlider(title: "점 크기", value: $dotSize, range: 4...40)
             } else if shape == "custom" {
                 NumberSlider(title: "높이", value: $badgeSize, range: 16...90)
-                Toggle("폭을 글자에 맞추기", isOn: Binding(get: { badgeWidth == 0 },
-                                                   set: { badgeWidth = $0 ? 0 : badgeSize }))
+                Toggle(content == "flag" ? "폭을 국기 비율에 맞추기" : "폭을 글자에 맞추기",
+                       isOn: Binding(get: { badgeWidth == 0 }, set: { badgeWidth = $0 ? 0 : badgeSize }))
                 if badgeWidth > 0 {
                     NumberSlider(title: "폭", value: $badgeWidth, range: 16...240)
                 }
                 NumberSlider(title: "모서리 반지름 (%)", value: $cornerRadius, range: 0...50)
-                NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
             } else {
                 NumberSlider(title: "뱃지 크기", value: $badgeSize, range: 16...90)
+            }
+            if content != "flag" && shape != "dot" {
                 NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
             }
             NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
                          range: 20...100)
-            if !glass {
+            if content == "flag" || !glass {
                 Picker("테두리", selection: $border) {
                     Text("없음").tag("none")
                     Text("실선").tag("solid")
@@ -316,6 +328,7 @@ struct StyleSections: View {
 
     private func preview(_ source: InputSourceInfo) -> BadgeView {
         var badge = BadgeView(source: source, scope: scope)
+        badge.content = content
         badge.shape = shape
         let scale = min(1, 36 / badgeSize)
         badge.fontSize = fontSize * scale
@@ -703,8 +716,8 @@ struct LanguageGroup: View {
                 LanguageColumns(
                     name: handle(detail: nil),
                     label: Color.clear,
-                    bg: Group { if !modeColors { colorWell("배경", $bg) } },
-                    fg: Group { if !modeColors { colorWell("글자", $fg) } },
+                    bg: Group { if !modeColors && !showsFlag { colorWell("배경", $bg) } },
+                    fg: Group { if !modeColors && !showsFlag { colorWell("글자", $fg) } },
                     hidden: Toggle("숨기기", isOn: hideAll).labelsHidden(),
                     preview: Color.clear,
                     menu: menu
@@ -725,6 +738,8 @@ struct LanguageGroup: View {
     }
 
     private static let dragType = "io.github.hikijun97.cheatime.language"
+
+    private var showsFlag: Bool { style.content == "flag" && modes.allSatisfy { modeRegion($0) != nil } }
 
     private var hideAll: Binding<Bool> {
         Binding(get: { hidden }, set: { value in
@@ -810,6 +825,7 @@ struct ModeRow<Name: View, Menu: View>: View {
     @AppStorage private var bg: String?
     @AppStorage private var fg: String?
     @AppStorage private var ownHidden: Bool?
+    @AppStorage private var region: String?
     @AppStorage private var langHidden: Bool
 
     init(source: InputSourceInfo, name: Name, style: BadgeView, langBg: Binding<String>, langFg: Binding<String>,
@@ -826,15 +842,22 @@ struct ModeRow<Name: View, Menu: View>: View {
         _bg = AppStorage(K.modeBg(source.id))
         _fg = AppStorage(K.modeFg(source.id))
         _ownHidden = AppStorage(K.modeHidden(source.id))
+        _region = AppStorage(K.modeFlag(source.id))
         _langHidden = AppStorage(wrappedValue: false, K.hidden(source.lang))
     }
 
     var body: some View {
         LanguageColumns(
             name: name,
-            label: TextField("표시 글자", text: $label).labelsHidden().roundedInputBorder(),
-            bg: Group { if showColors { colorWell("배경", bgColor) } },
-            fg: Group { if showColors { colorWell("글자", fgColor) } },
+            label: Group {
+                if style.content == "flag" {
+                    flagMenu
+                } else {
+                    TextField("표시 글자", text: $label).labelsHidden().roundedInputBorder()
+                }
+            },
+            bg: Group { if showColors && !showsFlag { colorWell("배경", bgColor) } },
+            fg: Group { if showColors && !showsFlag { colorWell("글자", fgColor) } },
             hidden: Toggle("숨기기", isOn: Binding(get: { hidden }, set: { ownHidden = $0 })).labelsHidden(),
             preview: preview,
             menu: menu
@@ -843,6 +866,40 @@ struct ModeRow<Name: View, Menu: View>: View {
     }
 
     private var hidden: Bool { ownHidden ?? langHidden }
+
+    private var showsFlag: Bool { style.content == "flag" && (region ?? defaultRegion(source.lang)) != nil }
+
+    private var flagMenu: some View {
+        let automatic = defaultRegion(source.lang)
+        let current = region ?? automatic
+        return SwiftUI.Menu {
+            Button {
+                region = nil
+            } label: {
+                Text(verbatim: String(localized: "자동") + (automatic.map { " · \(name(of: $0))" } ?? ""))
+                if let image = automatic.flatMap({ flagImage($0, icon: true) }) { Image(nsImage: image) }
+            }
+            Divider()
+            ForEach(flagRegions, id: \.code) { item in
+                Button { region = item.code } label: {
+                    Text(verbatim: item.name)
+                    if let image = flagImage(item.code, icon: true) { Image(nsImage: image) }
+                }
+            }
+        } label: {
+            if let image = current.flatMap({ flagImage($0, icon: true) }) {
+                Image(nsImage: image).clipShape(RoundedRectangle(cornerRadius: 3))
+            } else {
+                Text(verbatim: "–")
+            }
+        }
+        .fixedSize()
+        .help(Text(verbatim: (region ?? automatic).map(name) ?? ""))
+    }
+
+    private func name(of region: String) -> String {
+        Locale.current.localizedString(forRegionCode: region) ?? region
+    }
 
     private var bgColor: Binding<String> {
         ownColors ? Binding(get: { bg ?? langBg }, set: { bg = $0 }) : $langBg
@@ -855,6 +912,7 @@ struct ModeRow<Name: View, Menu: View>: View {
     private var preview: BadgeView {
         var badge = style
         badge.label = label
+        badge.region = region ?? defaultRegion(source.lang)
         badge.bg = Color(hex: bgColor.wrappedValue)
         badge.fg = Color(hex: fgColor.wrappedValue)
         if hidden { badge.opacity = 0.2 }
