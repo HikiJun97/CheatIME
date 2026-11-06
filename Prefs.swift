@@ -8,6 +8,7 @@ enum K {
     static let shape = "shape"
     static let fontSize = "fontSize"
     static let badgeSize = "badgeSize"
+    static let badgeSizeMigrated = "badgeSizeMigrated"
     static let dotSize = "dotSize"
     static let border = "border"
     static let borderWidth = "borderWidth"
@@ -64,14 +65,16 @@ func registerDefaults() {
         K.shape: "rounded", K.fontSize: 16.0, K.badgeSize: 29.0, K.dotSize: 12.0, K.opacity: 0.9, K.glass: false,
         K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF", K.flashOnly: false, K.flashDuration: 1200.0,
     ]
+    let migrateBadgeSize = !d.bool(forKey: K.badgeSizeMigrated)
     for scope in ["default"] + K.modes {
         for (key, value) in style { defaults[K.style(scope, key)] = d.object(forKey: key) ?? value }
         let badgeSize = K.style(scope, K.badgeSize)
-        if d.object(forKey: badgeSize) == nil,
+        if migrateBadgeSize, d.object(forKey: badgeSize) == nil,
            let fontSize = (d.object(forKey: K.style(scope, K.fontSize)) ?? d.object(forKey: K.fontSize)) as? Double {
             d.set((fontSize * 1.8).rounded(), forKey: badgeSize)
         }
     }
+    d.set(true, forKey: K.badgeSizeMigrated)
     for m in K.modes { defaults[K.useDefault(m)] = true }
     d.register(defaults: defaults)
 }
