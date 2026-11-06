@@ -90,3 +90,7 @@
 "업데이트 확인…" = "Check for Updates…";
 "자동으로 업데이트 확인" = "Automatically check for updates";
 "새 버전 %@ 설치…" = "Install Version %@…";
+"뱃지 켜기/끄기 단축키" = "Show/Hide Badge Shortcut";
+"단축키 입력" = "Record Shortcut";
+"키를 누르세요" = "Press Keys…";
+"지우기" = "Clear";

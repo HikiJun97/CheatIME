@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.setAccessibilityLabel("CheatIME")
         statusItem.menu = menu
         overlay.contextMenu = menu
+        Hotkey.shared.action = { [weak self] in self?.toggleBadge() }
         updateSubscription = Updates.shared.$pendingVersion.sink { [weak self] version in
             MainActor.assumeIsolated { self?.showPendingUpdate(version) }
         }
@@ -118,6 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         lastSourceID = source
         if changed { overlay.flash() } else { overlay.update() }
+        Hotkey.shared.update()
         showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
     }
 

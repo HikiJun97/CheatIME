@@ -88,7 +88,6 @@ extension BadgeView {
 }
 
 final class BadgeHost: NSHostingView<BadgeView> {
-    var onClick: () -> Void = {}
     var onDrop: () -> Void = {}
     private var start = NSPoint.zero
     private var origin = NSPoint.zero
@@ -113,7 +112,7 @@ final class BadgeHost: NSHostingView<BadgeView> {
 
     override func mouseUp(with event: NSEvent) {
         if event.modifierFlags.contains(.control) { return }
-        dragging ? onDrop() : onClick()
+        if dragging { onDrop() }
     }
 
     override func rightMouseDown(with event: NSEvent) {
@@ -367,7 +366,6 @@ final class Overlay {
         panel.ignoresMouseEvents = follow
         let host = BadgeHost(rootView: BadgeView(lang: "", scope: "default"))
         host.menu = contextMenu
-        host.onClick = { UserDefaults.standard.set(false, forKey: K.visible) }
         host.onDrop = { [weak self, weak panel] in
             if let self, let panel { self.savePosition(of: panel) }
         }

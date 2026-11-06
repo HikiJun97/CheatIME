@@ -31,6 +31,8 @@ enum K {
     static let flashOnly = "flashOnly"
     static let flashDuration = "flashDuration"
     static let styleTarget = "styleTarget"
+    static let toggleKey = "toggleKey"
+    static let toggleModifiers = "toggleModifiers"
     static let modes = ["fixed", "pointer", "caret"]
     static let styleKeys = [shape, fontSize, dotSize, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
     static func style(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
@@ -54,7 +56,7 @@ func registerDefaults() {
     var defaults: [String: Any] = [
         K.visible: true, K.displayMode: "all", K.displays: "", K.sound: false, K.rules: "[]", K.appFilter: false,
         K.filterApps: "", K.soundName: "Tink", K.hAlign: "right", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
-        K.settingsTab: "badge", K.styleTarget: "default",
+        K.settingsTab: "badge", K.styleTarget: "default", K.toggleKey: -1, K.toggleModifiers: 0,
         K.showFixed: mode == "fixed", K.showPointer: mode == "pointer", K.showCaret: mode == "caret", K.caretFallback: true,
     ]
     let style: [String: Any] = [
