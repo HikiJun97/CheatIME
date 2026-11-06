@@ -43,7 +43,13 @@ struct BadgeView: View {
             if glass, #available(macOS 26, *) {
                 text.glassEffect(.regular.tint(bg), in: outline())
             } else {
-                text.background(bg, in: outline())
+                text.background {
+                        if border == "none" {
+                            outline().fill(bg)
+                        } else {
+                            outline(inset: borderWidth / 2).fill(bg).padding(borderWidth / 2)
+                        }
+                    }
                     .overlay {
                         if border != "none" {
                             outline(inset: borderWidth / 2)
