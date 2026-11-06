@@ -20,8 +20,8 @@ struct BadgeView: View {
         let h = isDot ? dotSize : badgeSize
         let padding = switch shape {
         case "circle", "dot": 0.0
-        case "capsule": h * 0.39
-        default: h * 0.28
+        case "capsule": (h * 0.39).rounded()
+        default: (h * 0.28).rounded()
         }
         let dash: [CGFloat] = switch border {
         case "dashed": [borderWidth * 3, borderWidth * 2]
@@ -36,6 +36,9 @@ struct BadgeView: View {
             .minimumScaleFactor(0.5)
             .alignmentGuide(.inkCenter) { $0[.firstTextBaseline] - ink.midY * min(1, $0.width / ink.width) }
             .frame(height: h, alignment: Alignment(horizontal: .center, vertical: .inkCenter))
+            .visualEffect { content, proxy in
+                content.offset(x: proxy.size.width / 2 - ink.midX * min(1, proxy.size.width / ink.width))
+            }
             .padding(.horizontal, padding)
             .frame(width: shape == "circle" || isDot ? h : nil)
             .frame(minWidth: h)
@@ -65,12 +68,13 @@ struct BadgeView: View {
         .fixedSize()
     }
 
-    private func inkBounds() -> (midY: CGFloat, width: CGFloat) {
-        guard !label.isEmpty, shape != "dot" else { return (0, 1) }
+    private func inkBounds() -> (midX: CGFloat, midY: CGFloat, width: CGFloat) {
+        guard !label.isEmpty, shape != "dot" else { return (0.5, 0, 1) }
         let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: label, attributes: [.font: font]))
         let width = CTLineGetTypographicBounds(line, nil, nil, nil)
-        return (CTLineGetBoundsWithOptions(line, .useGlyphPathBounds).midY, max(width, 1))
+        let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        return (bounds.midX, bounds.midY, max(width, 1))
     }
 
     private func outline(inset: Double = 0) -> AnyShape {
