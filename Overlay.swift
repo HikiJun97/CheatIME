@@ -28,15 +28,17 @@ struct BadgeView: View {
         case "dotted": [0, borderWidth * 2]
         default: []
         }
+        let ink = inkBounds()
         let text = Text(isDot ? "" : label)
             .font(.system(size: fontSize, weight: .bold))
             .foregroundStyle(fg)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
+            .alignmentGuide(.inkCenter) { $0[.firstTextBaseline] - ink.midY * min(1, $0.width / ink.width) }
+            .frame(height: h, alignment: Alignment(horizontal: .center, vertical: .inkCenter))
             .padding(.horizontal, padding)
             .frame(width: shape == "circle" || isDot ? h : nil)
             .frame(minWidth: h)
-            .frame(height: h)
         Group {
             if glass, #available(macOS 26, *) {
                 text.glassEffect(.regular.tint(bg), in: outline())
@@ -57,6 +59,14 @@ struct BadgeView: View {
         .fixedSize()
     }
 
+    private func inkBounds() -> (midY: CGFloat, width: CGFloat) {
+        guard !label.isEmpty, shape != "dot" else { return (0, 1) }
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: label, attributes: [.font: font]))
+        let width = CTLineGetTypographicBounds(line, nil, nil, nil)
+        return (CTLineGetBoundsWithOptions(line, .useGlyphPathBounds).midY, max(width, 1))
+    }
+
     private func outline(inset: Double = 0) -> AnyShape {
         switch shape {
         case "circle", "dot": AnyShape(Circle())
@@ -64,6 +74,14 @@ struct BadgeView: View {
         default: AnyShape(RoundedRectangle(cornerRadius: max(0, badgeSize * 0.22 - inset)))
         }
     }
+}
+
+private enum InkCenter: AlignmentID {
+    static func defaultValue(in d: ViewDimensions) -> CGFloat { d[VerticalAlignment.center] }
+}
+
+extension VerticalAlignment {
+    static let inkCenter = VerticalAlignment(InkCenter.self)
 }
 
 extension BadgeView {
