@@ -138,7 +138,6 @@ func systemSounds() -> [String] {
     return files.map { ($0 as NSString).deletingPathExtension }.sorted()
 }
 
-/// Where a follow-mode badge sits around its anchor: the mouse hot spot or the text caret.
 struct Placement {
     static let directions = ["topLeft", "top", "topRight", "left", "", "right", "bottomLeft", "bottom", "bottomRight"]
 
@@ -148,17 +147,21 @@ struct Placement {
     var gapY: Double
     var flip: Bool
 
-    init(mode: String) {
-        let d = UserDefaults.standard
-        let index = Placement.directions.firstIndex(of: d.string(forKey: K.direction(mode)) ?? "bottomRight") ?? 8
+    init(direction: String, gapX: Double, gapY: Double, flip: Bool) {
+        let index = Placement.directions.firstIndex(of: direction) ?? 8
         h = index % 3 - 1
         v = 1 - index / 3
-        gapX = d.double(forKey: K.gapX(mode))
-        gapY = d.double(forKey: K.gapY(mode))
-        flip = d.bool(forKey: K.flip(mode))
+        self.gapX = gapX
+        self.gapY = gapY
+        self.flip = flip
     }
 
-    /// Bottom-left origin of the badge in y-up screen coordinates.
+    init(mode: String) {
+        let d = UserDefaults.standard
+        self.init(direction: d.string(forKey: K.direction(mode)) ?? "bottomRight", gapX: d.double(forKey: K.gapX(mode)),
+                  gapY: d.double(forKey: K.gapY(mode)), flip: d.bool(forKey: K.flip(mode)))
+    }
+
     func origin(around a: CGRect, size: CGSize) -> CGPoint {
         let x = switch h {
         case 1: a.maxX + gapX

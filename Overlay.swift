@@ -327,12 +327,17 @@ final class Overlay {
     }
 
     private func origin(_ mode: String, around anchor: NSRect, size: NSSize) -> NSPoint {
-        var placement = Placement(mode: mode)
+        let placement = Placement(mode: mode)
         var p = placement.origin(around: anchor, size: size)
         if placement.flip, let v = screen(containing: anchor.origin)?.visibleFrame {
-            if p.x < v.minX || p.x + size.width > v.maxX { placement.h = -placement.h }
-            if p.y < v.minY || p.y + size.height > v.maxY { placement.v = -placement.v }
-            p = placement.origin(around: anchor, size: size)
+            var opposite = placement
+            opposite.h = -placement.h
+            opposite.v = -placement.v
+            let q = opposite.origin(around: anchor, size: size)
+            let outX = { (x: CGFloat) in x < v.minX || x + size.width > v.maxX }
+            let outY = { (y: CGFloat) in y < v.minY || y + size.height > v.maxY }
+            if outX(p.x) && !outX(q.x) { p.x = q.x }
+            if outY(p.y) && !outY(q.y) { p.y = q.y }
         }
         return clamped(p, size: size, near: anchor.origin)
     }
@@ -357,8 +362,7 @@ final class Overlay {
     }
 
     private func screenUnderMouse() -> NSScreen? {
-        let p = NSEvent.mouseLocation
-        return NSScreen.screens.first { NSMouseInRect(p, $0.frame, false) } ?? NSScreen.screens.first
+        screen(containing: NSEvent.mouseLocation)
     }
 
     private func targetScreens() -> [NSScreen] {

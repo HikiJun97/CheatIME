@@ -258,7 +258,7 @@ struct StyleSections: View {
                     ForEach(languages.flatMap(modes), id: \.id) { preview($0) }
                 }
             }
-            Picker("모양", selection: $shape) {
+            Picker("모양", selection: shapeChoice) {
                 Text("둥근 사각형").tag("rounded")
                 Text("캡슐").tag("capsule")
                 Text("원").tag("circle")
@@ -266,11 +266,6 @@ struct StyleSections: View {
                 Text("직접 설정").tag("custom")
             }
             .pickerStyle(.segmented)
-            .onChange(of: shape) { old, new in
-                guard new == "custom" else { return }
-                badgeWidth = old == "circle" ? badgeSize : 0
-                cornerRadius = old == "rounded" ? 22 : 50
-            }
             if #available(macOS 26, *) {
                 Toggle("유리 효과 (Liquid Glass)", isOn: $glass)
             }
@@ -307,6 +302,16 @@ struct StyleSections: View {
                 }
             }
         }
+    }
+
+    private var shapeChoice: Binding<String> {
+        Binding(get: { shape }, set: { new in
+            if new == "custom" && shape != "custom" {
+                badgeWidth = shape == "circle" ? badgeSize : 0
+                cornerRadius = shape == "rounded" ? 22 : 50
+            }
+            shape = new
+        })
     }
 
     private func preview(_ source: InputSourceInfo) -> BadgeView {
@@ -362,7 +367,7 @@ struct PlacementSection: View {
     }
 
     var body: some View {
-        let placement = Placement(mode: mode)
+        let placement = Placement(direction: direction, gapX: gapX, gapY: gapY, flip: flip)
         Section("위치") {
             HStack(spacing: 16) {
                 DirectionGrid(selection: $direction, center: mode == "caret" ? "character.cursor.ibeam" : "cursorarrow")
@@ -420,7 +425,6 @@ struct DirectionGrid: View {
     }
 }
 
-/// Draws the anchor (mouse arrow or text caret) and the badge at their real distance, shrunk only when it does not fit.
 struct PlacementPreview: View {
     let mode: String
     let placement: Placement
@@ -473,7 +477,6 @@ struct PlacementPreview: View {
     }
 }
 
-/// Redraws a view when the badge style or the current input source changes.
 final class BadgeChanges: ObservableObject {
     private var subscription: AnyCancellable?
 
