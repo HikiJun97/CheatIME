@@ -26,7 +26,7 @@ final class Switcher {
             selectInputSource(pending.source)
             self.pending = nil
         }
-        let rules = decodeRules(UserDefaults.standard.string(forKey: K.rules) ?? "[]")
+        let rules = decodeRules(UserDefaults.standard[K.rules])
         guard let rule = rules.first(where: { $0.enabled && $0.app == app }) else { return }
         if rule.restore && pending == nil {
             pending = (app, currentInputSourceID())
@@ -36,7 +36,7 @@ final class Switcher {
 }
 
 struct RulesTab: View {
-    @AppStorage(K.rules) private var rulesJSON = "[]"
+    @AppStorage(K.rules) private var rulesJSON: String
 
     @ObservedObject private var inputs = InputSources.shared
     private var sources: [InputSourceInfo] { inputs.sources }

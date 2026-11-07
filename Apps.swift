@@ -75,8 +75,8 @@ final class SearchText: ObservableObject {
 }
 
 struct AppsTab: View {
-    @AppStorage(K.appFilter) private var appFilter = false
-    @AppStorage(K.filterApps) private var filterApps = ""
+    @AppStorage(K.appFilter) private var appFilter: Bool
+    @AppStorage(K.filterApps) private var filterApps: String
     @StateObject private var search = SearchText()
     @ObservedObject private var list = AppList.shared
 

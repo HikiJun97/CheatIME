@@ -4,14 +4,23 @@ import UniformTypeIdentifiers
 enum SettingsFile {
     private static let app = "CheatIME"
     private static let version = 1
-    private static let skipped: Set<String> = [K.settingsTab, K.styleTarget]
 
     private static var domain: String { Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName }
 
     private static func exported(_ key: String, _ value: Any) -> Bool {
-        !skipped.contains(key) && !key.hasPrefix("SU") && !key.hasPrefix("NS") && !key.hasPrefix("Apple")
-            && (value is String || value is NSNumber)
+        if let expected = K.portable[key] { return sameType(value, expected) }
+        return (key.hasPrefix("lang.") || key.hasPrefix("mode.")) && (value is String || value is NSNumber)
     }
+
+    private static func sameType(_ value: Any, _ expected: Any) -> Bool {
+        switch (value, expected) {
+        case (is String, is String): true
+        case let (a as NSNumber, b as NSNumber): isBool(a) == isBool(b)
+        default: false
+        }
+    }
+
+    private static func isBool(_ n: NSNumber) -> Bool { CFGetTypeID(n) == CFBooleanGetTypeID() }
 
     static func data() throws -> Data {
         let saved = UserDefaults.standard.persistentDomain(forName: domain) ?? [:]
@@ -24,6 +33,7 @@ enum SettingsFile {
         guard let file = try? JSONSerialization.jsonObject(with: data) as? [String: Any], file["app"] as? String == app,
               let settings = file["settings"] as? [String: Any]
         else { throw Failure.notSettings }
+        guard file["version"] as? Int ?? version <= version else { throw Failure.newerVersion }
         return settings
     }
 
@@ -35,6 +45,8 @@ enum SettingsFile {
         for (key, value) in settings where exported(key, value) {
             d.set(value, forKey: key)
         }
+        migrate()
+        InputSources.shared.reload()
     }
 
     static func export() throws -> Bool {
@@ -63,7 +75,13 @@ enum SettingsFile {
 
     enum Failure: LocalizedError {
         case notSettings
+        case newerVersion
 
-        var errorDescription: String? { NSLocalizedString("CheatIME 설정 파일이 아닙니다.", comment: "") }
+        var errorDescription: String? {
+            switch self {
+            case .notSettings: NSLocalizedString("CheatIME 설정 파일이 아닙니다.", comment: "")
+            case .newerVersion: NSLocalizedString("더 새로운 버전의 CheatIME에서 만든 설정 파일입니다. CheatIME를 업데이트한 뒤 다시 가져오세요.", comment: "")
+            }
+        }
     }
 }

@@ -1,59 +1,126 @@
 import SwiftUI
 
+struct Pref<Value>: AnyPref {
+    let key: String
+    let value: Value
+
+    init(_ key: String, _ value: Value) {
+        self.key = key
+        self.value = value
+    }
+
+    var stored: Any { (value as? any RawRepresentable)?.rawValue ?? value }
+}
+
+protocol AnyPref {
+    var key: String { get }
+    var stored: Any { get }
+}
+
+extension UserDefaults {
+    subscript<V>(_ p: Pref<V>) -> V {
+        get { object(forKey: p.key) as? V ?? p.value }
+        set { set(newValue, forKey: p.key) }
+    }
+
+    subscript<V: RawRepresentable>(_ p: Pref<V>) -> V where V.RawValue == String {
+        get { string(forKey: p.key).flatMap { V(rawValue: $0) } ?? p.value }
+        set { set(newValue.rawValue, forKey: p.key) }
+    }
+}
+
+extension AppStorage {
+    init(_ p: Pref<Value>) where Value == Bool { self.init(wrappedValue: p.value, p.key) }
+    init(_ p: Pref<Value>) where Value == Int { self.init(wrappedValue: p.value, p.key) }
+    init(_ p: Pref<Value>) where Value == Double { self.init(wrappedValue: p.value, p.key) }
+    init(_ p: Pref<Value>) where Value == String { self.init(wrappedValue: p.value, p.key) }
+    init(_ p: Pref<Value>) where Value: RawRepresentable, Value.RawValue == String {
+        self.init(wrappedValue: p.value, p.key)
+    }
+}
+
+enum Mode: String, CaseIterable {
+    case fixed, pointer, caret
+}
+
+enum DisplayMode: String {
+    case all, mouse, selected
+}
+
+enum HAlign: String {
+    case left, center, right
+}
+
+enum VAlign: String {
+    case top, middle, bottom
+}
+
+enum BadgeContent: String {
+    case text, flag
+}
+
+enum BadgeShape: String {
+    case rounded, capsule, circle, dot, custom
+}
+
+enum BorderStyle: String {
+    case none, solid, dashed, dotted
+}
+
 enum K {
-    static let visible = "visible"
-    static let positionMode = "positionMode"
-    static let displayMode = "displayMode"
-    static let displays = "displays"
-    static let shape = "shape"
-    static let fontSize = "fontSize"
-    static let badgeSize = "badgeSize"
-    static let badgeSizeMigrated = "badgeSizeMigrated"
-    static let dotSize = "dotSize"
-    static let badgeWidth = "badgeWidth"
-    static let cornerRadius = "cornerRadius"
-    static let content = "content"
-    static let border = "border"
-    static let borderWidth = "borderWidth"
-    static let borderColor = "borderColor"
-    static let opacity = "opacity"
-    static let glass = "glass"
-    static let appFilter = "appFilter"
-    static let filterApps = "filterApps"
+    static let visible = Pref("visible", true)
+    static let displayMode = Pref("displayMode", DisplayMode.all)
+    static let displays = Pref("displays", "")
+    static let appFilter = Pref("appFilter", false)
+    static let filterApps = Pref("filterApps", "")
+    static let rules = Pref("rules", "[]")
+    static let sound = Pref("sound", false)
+    static let soundName = Pref("soundName", "Tink")
+    static let hAlign = Pref("hAlign", HAlign.left)
+    static let vAlign = Pref("vAlign", VAlign.bottom)
+    static let marginX = Pref("marginX", 12.0)
+    static let marginY = Pref("marginY", 12.0)
+    static let snapToEdges = Pref("snapToEdges", true)
+    static let caretFallback = Pref("caretFallback", true)
+    static let toggleKey = Pref("toggleKey", -1)
+    static let toggleModifiers = Pref("toggleModifiers", 0)
+    static let settingsTab = Pref("settingsTab", "badge")
+    static let styleTarget = Pref("styleTarget", "default")
     static let badgeLanguages = "badgeLanguages"
-    static let rules = "rules"
-    static let sound = "sound"
-    static let soundName = "soundName"
-    static let hAlign = "hAlign"
-    static let vAlign = "vAlign"
-    static let marginX = "marginX"
-    static let marginY = "marginY"
-    static let snapToEdges = "snapToEdges"
-    static let settingsTab = "settingsTab"
-    static let showFixed = "showFixed"
-    static let showPointer = "showPointer"
-    static let showCaret = "showCaret"
-    static let caretFallback = "caretFallback"
-    static let flashOnly = "flashOnly"
-    static let flashDuration = "flashDuration"
-    static let styleTarget = "styleTarget"
-    static let toggleKey = "toggleKey"
-    static let toggleModifiers = "toggleModifiers"
-    static let modes = ["fixed", "pointer", "caret"]
-    static let styleKeys = [content, shape, fontSize, badgeSize, dotSize, badgeWidth, cornerRadius, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
-    static func style(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
-    static func useDefault(_ mode: String) -> String { "\(mode).useDefault" }
-    static func show(_ mode: String) -> String {
+    static let badgeSizeMigrated = "badgeSizeMigrated"
+    static let positionMode = "positionMode"
+
+    static let content = Pref("content", BadgeContent.text)
+    static let shape = Pref("shape", BadgeShape.rounded)
+    static let fontSize = Pref("fontSize", 16.0)
+    static let badgeSize = Pref("badgeSize", 29.0)
+    static let dotSize = Pref("dotSize", 12.0)
+    static let badgeWidth = Pref("badgeWidth", 0.0)
+    static let cornerRadius = Pref("cornerRadius", 22.0)
+    static let opacity = Pref("opacity", 0.9)
+    static let glass = Pref("glass", false)
+    static let border = Pref("border", BorderStyle.none)
+    static let borderWidth = Pref("borderWidth", 2.0)
+    static let borderColor = Pref("borderColor", "#FFFFFF")
+    static let flashOnly = Pref("flashOnly", false)
+    static let flashDuration = Pref("flashDuration", 1200.0)
+    static let styleKeys: [any AnyPref] = [content, shape, fontSize, badgeSize, dotSize, badgeWidth, cornerRadius, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
+    static let scopes = ["default"] + Mode.allCases.map(\.rawValue)
+
+    static func styleKey(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
+    static func style<V>(_ scope: String, _ p: Pref<V>) -> Pref<V> { Pref(styleKey(scope, p.key), p.value) }
+    static func useDefault(_ mode: Mode) -> Pref<Bool> { Pref("\(mode.rawValue).useDefault", true) }
+    static func show(_ mode: Mode) -> Pref<Bool> {
         switch mode {
-        case "fixed": showFixed
-        case "pointer": showPointer
-        default: showCaret
+        case .fixed: Pref("showFixed", true)
+        case .pointer: Pref("showPointer", false)
+        case .caret: Pref("showCaret", false)
         }
     }
-    static func direction(_ mode: String) -> String { "\(mode).direction" }
-    static func gapX(_ mode: String) -> String { "\(mode).gapX" }
-    static func gapY(_ mode: String) -> String { "\(mode).gapY" }
-    static func flip(_ mode: String) -> String { "\(mode).flip" }
+    static func direction(_ mode: Mode) -> Pref<String> { Pref("\(mode.rawValue).direction", mode == .caret ? "right" : "bottomRight") }
+    static func gapX(_ mode: Mode) -> Pref<Double> { Pref("\(mode.rawValue).gapX", mode == .caret ? 6.0 : 16.0) }
+    static func gapY(_ mode: Mode) -> Pref<Double> { Pref("\(mode.rawValue).gapY", mode == .caret ? 6.0 : 16.0) }
+    static func flip(_ mode: Mode) -> Pref<Bool> { Pref("\(mode.rawValue).flip", false) }
     static func label(_ lang: String) -> String { "lang.\(lang).label" }
     static func bg(_ lang: String) -> String { "lang.\(lang).bg" }
     static func fg(_ lang: String) -> String { "lang.\(lang).fg" }
@@ -64,35 +131,50 @@ enum K {
     static func modeFg(_ id: String) -> String { "mode.\(id).fg" }
     static func modeHidden(_ id: String) -> String { "mode.\(id).hidden" }
     static func modeFlag(_ id: String) -> String { "mode.\(id).flag" }
+
+    static let portable: [String: Any] = {
+        var prefs: [any AnyPref] = [visible, displayMode, displays, appFilter, filterApps, rules, sound, soundName,
+                                    hAlign, vAlign, marginX, marginY, snapToEdges, caretFallback, toggleKey, toggleModifiers]
+        for mode in Mode.allCases {
+            prefs += [useDefault(mode), show(mode), direction(mode), gapX(mode), gapY(mode), flip(mode)] as [any AnyPref]
+        }
+        var all = Dictionary(uniqueKeysWithValues: prefs.map { ($0.key, $0.stored) })
+        for p in styleKeys {
+            all[p.key] = p.stored
+            for scope in scopes { all[styleKey(scope, p.key)] = p.stored }
+        }
+        all[badgeLanguages] = ""
+        all[badgeSizeMigrated] = false
+        all[positionMode] = ""
+        return all
+    }()
 }
 
-func registerDefaults() {
+func migrate() {
     let d = UserDefaults.standard
-    let mode = d.string(forKey: K.positionMode) ?? "fixed"
-    var defaults: [String: Any] = [
-        K.visible: true, K.displayMode: "all", K.displays: "", K.sound: false, K.rules: "[]", K.appFilter: false,
-        K.filterApps: "", K.soundName: "Tink", K.hAlign: "left", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
-        K.snapToEdges: true, K.settingsTab: "badge", K.styleTarget: "default", K.toggleKey: -1, K.toggleModifiers: 0,
-        K.showFixed: mode == "fixed", K.showPointer: mode == "pointer", K.showCaret: mode == "caret", K.caretFallback: true,
-        K.direction("pointer"): "bottomRight", K.gapX("pointer"): 16.0, K.gapY("pointer"): 16.0, K.flip("pointer"): false,
-        K.direction("caret"): "right", K.gapX("caret"): 6.0, K.gapY("caret"): 6.0, K.flip("caret"): false,
-    ]
-    let style: [String: Any] = [
-        K.content: "text", K.shape: "rounded", K.fontSize: 16.0, K.badgeSize: 29.0, K.dotSize: 12.0, K.badgeWidth: 0.0, K.cornerRadius: 22.0, K.opacity: 0.9, K.glass: false,
-        K.border: "none", K.borderWidth: 2.0, K.borderColor: "#FFFFFF", K.flashOnly: false, K.flashDuration: 1200.0,
-    ]
-    let migrateBadgeSize = !d.bool(forKey: K.badgeSizeMigrated)
-    for scope in ["default"] + K.modes {
-        for (key, value) in style { defaults[K.style(scope, key)] = d.object(forKey: key) ?? value }
-        let badgeSize = K.style(scope, K.badgeSize)
-        if migrateBadgeSize, d.object(forKey: badgeSize) == nil,
-           let fontSize = (d.object(forKey: K.style(scope, K.fontSize)) ?? d.object(forKey: K.fontSize)) as? Double {
-            d.set((fontSize * 1.8).rounded(), forKey: badgeSize)
+    if let mode = d.string(forKey: K.positionMode) {
+        for m in Mode.allCases where d.object(forKey: K.show(m).key) == nil {
+            d.set(m.rawValue == mode, forKey: K.show(m).key)
         }
+        d.removeObject(forKey: K.positionMode)
     }
-    d.set(true, forKey: K.badgeSizeMigrated)
-    for m in K.modes { defaults[K.useDefault(m)] = true }
-    d.register(defaults: defaults)
+    let ownStyle = ["default"] + Mode.allCases.filter { !d[K.useDefault($0)] }.map(\.rawValue)
+    for p in K.styleKeys {
+        guard let legacy = d.object(forKey: p.key) else { continue }
+        for scope in ownStyle where d.object(forKey: K.styleKey(scope, p.key)) == nil {
+            d.set(legacy, forKey: K.styleKey(scope, p.key))
+        }
+        d.removeObject(forKey: p.key)
+    }
+    if !d.bool(forKey: K.badgeSizeMigrated) {
+        for scope in K.scopes {
+            let badgeSize = K.style(scope, K.badgeSize).key
+            if d.object(forKey: badgeSize) == nil, let fontSize = d.object(forKey: K.style(scope, K.fontSize).key) as? Double {
+                d.set((fontSize * 1.8).rounded(), forKey: badgeSize)
+            }
+        }
+        d.set(true, forKey: K.badgeSizeMigrated)
+    }
 }
 
 func langDefaults(_ lang: String) -> (label: String, bg: String, fg: String) {
@@ -188,10 +270,9 @@ struct Placement {
         self.flip = flip
     }
 
-    init(mode: String) {
+    init(mode: Mode) {
         let d = UserDefaults.standard
-        self.init(direction: d.string(forKey: K.direction(mode)) ?? "bottomRight", gapX: d.double(forKey: K.gapX(mode)),
-                  gapY: d.double(forKey: K.gapY(mode)), flip: d.bool(forKey: K.flip(mode)))
+        self.init(direction: d[K.direction(mode)], gapX: d[K.gapX(mode)], gapY: d[K.gapY(mode)], flip: d[K.flip(mode)])
     }
 
     func origin(around a: CGRect, size: CGSize) -> CGPoint {
@@ -209,14 +290,14 @@ struct Placement {
     }
 }
 
-func styleScope(_ mode: String) -> String {
-    UserDefaults.standard.bool(forKey: K.useDefault(mode)) ? "default" : mode
+func styleScope(_ mode: Mode) -> String {
+    UserDefaults.standard[K.useDefault(mode)] ? "default" : mode.rawValue
 }
 
-func copyDefaultStyle(to mode: String) {
+func copyDefaultStyle(to mode: Mode) {
     let d = UserDefaults.standard
     let saved = d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName) ?? [:]
-    for key in K.styleKeys where saved[K.style(mode, key)] == nil {
-        d.set(d.object(forKey: K.style("default", key)), forKey: K.style(mode, key))
+    for p in K.styleKeys where saved[K.styleKey(mode.rawValue, p.key)] == nil {
+        d.set(d.object(forKey: K.styleKey("default", p.key)) ?? p.stored, forKey: K.styleKey(mode.rawValue, p.key))
     }
 }

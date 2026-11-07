@@ -20,7 +20,7 @@ final class Hotkey {
 
     func update() {
         let d = UserDefaults.standard
-        let key = d.integer(forKey: K.toggleKey), modifiers = d.integer(forKey: K.toggleModifiers)
+        let key = d[K.toggleKey], modifiers = d[K.toggleModifiers]
         guard !paused, registered != [key, modifiers] else { return }
         unregister()
         guard key >= 0 else { return }
@@ -112,15 +112,15 @@ final class ShortcutRecording: ObservableObject {
         if flags.contains(.control) { carbon |= controlKey }
         if flags.contains(.shift) { carbon |= shiftKey }
         let d = UserDefaults.standard
-        d.set(Int(event.keyCode), forKey: K.toggleKey)
-        d.set(carbon, forKey: K.toggleModifiers)
+        d[K.toggleKey] = Int(event.keyCode)
+        d[K.toggleModifiers] = carbon
         stop()
     }
 }
 
 struct ShortcutRecorder: View {
-    @AppStorage(K.toggleKey) private var key = -1
-    @AppStorage(K.toggleModifiers) private var modifiers = 0
+    @AppStorage(K.toggleKey) private var key: Int
+    @AppStorage(K.toggleModifiers) private var modifiers: Int
     @StateObject private var recording = ShortcutRecording()
 
     var body: some View {

@@ -3,7 +3,7 @@ import Combine
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage(K.settingsTab) private var tab = "badge"
+    @AppStorage(K.settingsTab) private var tab: String
 
     private let panes: [(id: String, title: LocalizedStringKey)] = [
         ("badge", "뱃지"), ("apps", "앱"), ("rules", "자동 전환"), ("general", "일반"),
@@ -46,15 +46,15 @@ extension View {
 }
 
 struct BadgeTab: View {
-    @AppStorage(K.styleTarget) private var target = "default"
+    @AppStorage(K.styleTarget) private var target: String
 
     var body: some View {
         SubTabs(selection: $target, tabs: [
             ("default", "기본값"), ("fixed", "고정 위치"), ("pointer", "마우스 포인터 옆"), ("caret", "텍스트 커서 옆"),
         ]) { id in
             Form {
-                if K.modes.contains(id) {
-                    PositionSections(mode: id)
+                if let mode = Mode(rawValue: id) {
+                    PositionSections(mode: mode)
                 } else {
                     DefaultSections()
                 }
@@ -134,8 +134,8 @@ struct SubTabs<Content: View>: NSViewRepresentable {
 }
 
 struct DefaultSections: View {
-    @AppStorage(K.sound) private var sound = false
-    @AppStorage(K.soundName) private var soundName = "Tink"
+    @AppStorage(K.sound) private var sound: Bool
+    @AppStorage(K.soundName) private var soundName: String
 
     private let sounds = systemSounds()
 
@@ -154,21 +154,21 @@ struct DefaultSections: View {
 }
 
 struct PositionSections: View {
-    let mode: String
+    let mode: Mode
     @AppStorage private var show: Bool
     @AppStorage private var useDefault: Bool
 
-    init(mode: String) {
+    init(mode: Mode) {
         self.mode = mode
-        _show = AppStorage(wrappedValue: mode == "fixed", K.show(mode))
-        _useDefault = AppStorage(wrappedValue: true, K.useDefault(mode))
+        _show = AppStorage(K.show(mode))
+        _useDefault = AppStorage(K.useDefault(mode))
     }
 
     var body: some View {
         Section {
             Toggle("표시", isOn: $show)
                 .onChange(of: show) {
-                    if mode == "caret" && show { _ = accessibilityTrusted(prompt: true) }
+                    if mode == .caret && show { _ = accessibilityTrusted(prompt: true) }
                 }
             Toggle("기본값 따르기", isOn: $useDefault)
                 .onChange(of: useDefault) {
@@ -177,17 +177,17 @@ struct PositionSections: View {
             Text("끄면 이 위치의 스타일과 표시 시점을 따로 정합니다.")
                 .foregroundStyle(.secondary)
         }
-        if mode == "caret" {
+        if mode == .caret {
             CaretSection()
         }
-        if mode != "fixed" {
+        if mode != .fixed {
             PlacementSection(mode: mode)
         }
         if !useDefault {
-            StyleSections(scope: mode)
-            TimingSection(scope: mode)
+            StyleSections(scope: mode.rawValue)
+            TimingSection(scope: mode.rawValue)
         }
-        if mode == "fixed" {
+        if mode == .fixed {
             FixedSections()
         }
     }
@@ -195,8 +195,8 @@ struct PositionSections: View {
 
 struct StyleSections: View {
     let scope: String
-    @AppStorage private var content: String
-    @AppStorage private var shape: String
+    @AppStorage private var content: BadgeContent
+    @AppStorage private var shape: BadgeShape
     @AppStorage private var fontSize: Double
     @AppStorage private var badgeSize: Double
     @AppStorage private var dotSize: Double
@@ -204,7 +204,7 @@ struct StyleSections: View {
     @AppStorage private var cornerRadius: Double
     @AppStorage private var opacity: Double
     @AppStorage private var glass: Bool
-    @AppStorage private var border: String
+    @AppStorage private var border: BorderStyle
     @AppStorage private var borderWidth: Double
     @AppStorage private var borderColor: String
 
@@ -217,19 +217,18 @@ struct StyleSections: View {
 
     init(scope: String) {
         self.scope = scope
-        func key(_ name: String) -> String { K.style(scope, name) }
-        _content = AppStorage(wrappedValue: "text", key(K.content))
-        _shape = AppStorage(wrappedValue: "rounded", key(K.shape))
-        _fontSize = AppStorage(wrappedValue: 16.0, key(K.fontSize))
-        _badgeSize = AppStorage(wrappedValue: 29.0, key(K.badgeSize))
-        _dotSize = AppStorage(wrappedValue: 12.0, key(K.dotSize))
-        _badgeWidth = AppStorage(wrappedValue: 0.0, key(K.badgeWidth))
-        _cornerRadius = AppStorage(wrappedValue: 22.0, key(K.cornerRadius))
-        _opacity = AppStorage(wrappedValue: 0.9, key(K.opacity))
-        _glass = AppStorage(wrappedValue: false, key(K.glass))
-        _border = AppStorage(wrappedValue: "none", key(K.border))
-        _borderWidth = AppStorage(wrappedValue: 2.0, key(K.borderWidth))
-        _borderColor = AppStorage(wrappedValue: "#FFFFFF", key(K.borderColor))
+        _content = AppStorage(K.style(scope, K.content))
+        _shape = AppStorage(K.style(scope, K.shape))
+        _fontSize = AppStorage(K.style(scope, K.fontSize))
+        _badgeSize = AppStorage(K.style(scope, K.badgeSize))
+        _dotSize = AppStorage(K.style(scope, K.dotSize))
+        _badgeWidth = AppStorage(K.style(scope, K.badgeWidth))
+        _cornerRadius = AppStorage(K.style(scope, K.cornerRadius))
+        _opacity = AppStorage(K.style(scope, K.opacity))
+        _glass = AppStorage(K.style(scope, K.glass))
+        _border = AppStorage(K.style(scope, K.border))
+        _borderWidth = AppStorage(K.style(scope, K.borderWidth))
+        _borderColor = AppStorage(K.style(scope, K.borderColor))
     }
 
     var body: some View {
@@ -237,7 +236,7 @@ struct StyleSections: View {
             Section("입력 모드별 표시") {
                 VStack(spacing: 0) {
                     LanguageColumns(
-                        name: Text("언어 / 입력 모드"), label: Text(content == "flag" ? "국기" : "표시 글자"), bg: Text("배경"), fg: Text("글자"),
+                        name: Text("언어 / 입력 모드"), label: Text(content == .flag ? "국기" : "표시 글자"), bg: Text("배경"), fg: Text("글자"),
                         hidden: Text("숨기기"), preview: Text("미리보기"), menu: Color.clear
                     )
                     .font(.caption)
@@ -261,30 +260,30 @@ struct StyleSections: View {
                 }
             }
             Picker("표시 내용", selection: $content) {
-                Text("글자").tag("text")
-                Text("국기").tag("flag")
+                Text("글자").tag(BadgeContent.text)
+                Text("국기").tag(BadgeContent.flag)
             }
             .pickerStyle(.segmented)
-            if content == "flag" && scope != "default" {
+            if content == .flag && scope != "default" {
                 Text("입력 모드마다 쓸 국기는 기본값 탭에서 고릅니다.")
                     .foregroundStyle(.secondary)
             }
             Picker("모양", selection: shapeChoice) {
-                Text("둥근 사각형").tag("rounded")
-                Text("캡슐").tag("capsule")
-                Text("원").tag("circle")
-                Text("점").tag("dot")
-                Text("직접 설정").tag("custom")
+                Text("둥근 사각형").tag(BadgeShape.rounded)
+                Text("캡슐").tag(BadgeShape.capsule)
+                Text("원").tag(BadgeShape.circle)
+                Text("점").tag(BadgeShape.dot)
+                Text("직접 설정").tag(BadgeShape.custom)
             }
             .pickerStyle(.segmented)
-            if content != "flag", #available(macOS 26, *) {
+            if content != .flag, #available(macOS 26, *) {
                 Toggle("유리 효과 (Liquid Glass)", isOn: $glass)
             }
-            if shape == "dot" {
+            if shape == .dot {
                 NumberSlider(title: "점 크기", value: $dotSize, range: 4...40)
-            } else if shape == "custom" {
+            } else if shape == .custom {
                 NumberSlider(title: "높이", value: $badgeSize, range: 16...90)
-                Toggle(content == "flag" ? "폭을 국기 비율에 맞추기" : "폭을 글자에 맞추기",
+                Toggle(content == .flag ? "폭을 국기 비율에 맞추기" : "폭을 글자에 맞추기",
                        isOn: Binding(get: { badgeWidth == 0 }, set: { badgeWidth = $0 ? 0 : badgeSize }))
                 if badgeWidth > 0 {
                     NumberSlider(title: "폭", value: $badgeWidth, range: 16...240)
@@ -293,20 +292,20 @@ struct StyleSections: View {
             } else {
                 NumberSlider(title: "뱃지 크기", value: $badgeSize, range: 16...90)
             }
-            if content != "flag" && shape != "dot" {
+            if content != .flag && shape != .dot {
                 NumberSlider(title: "글자 크기", value: $fontSize, range: 10...48)
             }
             NumberSlider(title: "불투명도 (%)", value: Binding(get: { opacity * 100 }, set: { opacity = $0 / 100 }),
                          range: 20...100)
-            if content == "flag" || !glass {
+            if content == .flag || !glass {
                 Picker("테두리", selection: $border) {
-                    Text("없음").tag("none")
-                    Text("실선").tag("solid")
-                    Text("파선").tag("dashed")
-                    Text("점선").tag("dotted")
+                    Text("없음").tag(BorderStyle.none)
+                    Text("실선").tag(BorderStyle.solid)
+                    Text("파선").tag(BorderStyle.dashed)
+                    Text("점선").tag(BorderStyle.dotted)
                 }
                 .pickerStyle(.segmented)
-                if border != "none" {
+                if border != BorderStyle.none {
                     NumberSlider(title: "테두리 두께", value: $borderWidth, range: 1...8)
                     ColorPicker("테두리 색", selection: Binding(get: { Color(hex: borderColor) },
                                                              set: { borderColor = $0.hex }),
@@ -316,11 +315,11 @@ struct StyleSections: View {
         }
     }
 
-    private var shapeChoice: Binding<String> {
+    private var shapeChoice: Binding<BadgeShape> {
         Binding(get: { shape }, set: { new in
-            if new == "custom" && shape != "custom" {
-                badgeWidth = shape == "circle" ? badgeSize : 0
-                cornerRadius = shape == "rounded" ? 22 : 50
+            if new == .custom && shape != .custom {
+                badgeWidth = shape == .circle ? badgeSize : 0
+                cornerRadius = shape == .rounded ? 22 : 50
             }
             shape = new
         })
@@ -351,8 +350,8 @@ struct TimingSection: View {
     @AppStorage private var flashDuration: Double
 
     init(scope: String) {
-        _flashOnly = AppStorage(wrappedValue: false, K.style(scope, K.flashOnly))
-        _flashDuration = AppStorage(wrappedValue: 1200.0, K.style(scope, K.flashDuration))
+        _flashOnly = AppStorage(K.style(scope, K.flashOnly))
+        _flashDuration = AppStorage(K.style(scope, K.flashDuration))
     }
 
     var body: some View {
@@ -365,25 +364,25 @@ struct TimingSection: View {
 }
 
 struct PlacementSection: View {
-    let mode: String
+    let mode: Mode
     @AppStorage private var direction: String
     @AppStorage private var gapX: Double
     @AppStorage private var gapY: Double
     @AppStorage private var flip: Bool
 
-    init(mode: String) {
+    init(mode: Mode) {
         self.mode = mode
-        _direction = AppStorage(wrappedValue: mode == "caret" ? "right" : "bottomRight", K.direction(mode))
-        _gapX = AppStorage(wrappedValue: mode == "caret" ? 6.0 : 16.0, K.gapX(mode))
-        _gapY = AppStorage(wrappedValue: mode == "caret" ? 6.0 : 16.0, K.gapY(mode))
-        _flip = AppStorage(wrappedValue: false, K.flip(mode))
+        _direction = AppStorage(K.direction(mode))
+        _gapX = AppStorage(K.gapX(mode))
+        _gapY = AppStorage(K.gapY(mode))
+        _flip = AppStorage(K.flip(mode))
     }
 
     var body: some View {
         let placement = Placement(direction: direction, gapX: gapX, gapY: gapY, flip: flip)
         Section("위치") {
             HStack(spacing: 16) {
-                DirectionGrid(selection: $direction, center: mode == "caret" ? "character.cursor.ibeam" : "cursorarrow")
+                DirectionGrid(selection: $direction, center: mode == .caret ? "character.cursor.ibeam" : "cursorarrow")
                 PlacementPreview(mode: mode, placement: placement)
             }
             NumberSlider(title: "가로 거리", value: $gapX, range: 0...100)
@@ -439,7 +438,7 @@ struct DirectionGrid: View {
 }
 
 struct PlacementPreview: View {
-    let mode: String
+    let mode: Mode
     let placement: Placement
     @StateObject private var changes = BadgeChanges()
 
@@ -448,10 +447,10 @@ struct PlacementPreview: View {
     var body: some View {
         let badge = badge()
         let size = NSHostingView(rootView: badge).fittingSize
-        let o = placement.origin(around: mode == "caret" ? Self.caret : .zero, size: size)
+        let o = placement.origin(around: mode == .caret ? Self.caret : .zero, size: size)
         let badgeRect = CGRect(x: o.x, y: -o.y - size.height, width: size.width, height: size.height)
         let cursor = NSCursor.arrow
-        let anchorRect = mode == "caret"
+        let anchorRect = mode == .caret
             ? CGRect(x: -85, y: -9, width: 87, height: 18)
             : CGRect(origin: CGPoint(x: -cursor.hotSpot.x, y: -cursor.hotSpot.y), size: cursor.image.size)
         let all = badgeRect.union(anchorRect)
@@ -459,7 +458,7 @@ struct PlacementPreview: View {
             let scale = min(1, (geo.size.width - 24) / all.width, (geo.size.height - 24) / all.height)
             ZStack(alignment: .topLeading) {
                 Group {
-                    if mode == "caret" {
+                    if mode == .caret {
                         HStack(spacing: 0) {
                             Text(verbatim: "가나다라")
                                 .font(.system(size: 15))
@@ -505,8 +504,8 @@ final class BadgeChanges: ObservableObject {
 }
 
 struct CaretSection: View {
-    @AppStorage(K.caretFallback) private var caretFallback = true
-    @AppStorage(K.showPointer) private var showPointer = false
+    @AppStorage(K.caretFallback) private var caretFallback: Bool
+    @AppStorage(K.show(.pointer)) private var showPointer: Bool
 
     var body: some View {
         Section("텍스트 커서") {
@@ -548,24 +547,24 @@ final class ScreenList: ObservableObject {
 }
 
 struct FixedSections: View {
-    @AppStorage(K.displayMode) private var displayMode = "all"
-    @AppStorage(K.displays) private var displays = ""
-    @AppStorage(K.hAlign) private var hAlign = "left"
-    @AppStorage(K.vAlign) private var vAlign = "bottom"
-    @AppStorage(K.marginX) private var marginX = 12.0
-    @AppStorage(K.marginY) private var marginY = 12.0
-    @AppStorage(K.snapToEdges) private var snapToEdges = true
+    @AppStorage(K.displayMode) private var displayMode: DisplayMode
+    @AppStorage(K.displays) private var displays: String
+    @AppStorage(K.hAlign) private var hAlign: HAlign
+    @AppStorage(K.vAlign) private var vAlign: VAlign
+    @AppStorage(K.marginX) private var marginX: Double
+    @AppStorage(K.marginY) private var marginY: Double
+    @AppStorage(K.snapToEdges) private var snapToEdges: Bool
 
     @StateObject private var screenList = ScreenList()
 
     var body: some View {
         Section("디스플레이") {
             Picker("표시할 곳", selection: $displayMode) {
-                Text("모든 디스플레이").tag("all")
-                Text("마우스가 있는 디스플레이").tag("mouse")
-                Text("직접 선택").tag("selected")
+                Text("모든 디스플레이").tag(DisplayMode.all)
+                Text("마우스가 있는 디스플레이").tag(DisplayMode.mouse)
+                Text("직접 선택").tag(DisplayMode.selected)
             }
-            if displayMode == "selected" {
+            if displayMode == .selected {
                 ForEach(screenList.screens, id: \.uuid) { screen in
                     Toggle(screen.localizedName, isOn: chosen(screen.uuid))
                 }
@@ -573,15 +572,15 @@ struct FixedSections: View {
         }
         Section("위치") {
             Picker("가로", selection: $hAlign) {
-                Text("왼쪽").tag("left")
-                Text("가운데").tag("center")
-                Text("오른쪽").tag("right")
+                Text("왼쪽").tag(HAlign.left)
+                Text("가운데").tag(HAlign.center)
+                Text("오른쪽").tag(HAlign.right)
             }
             .pickerStyle(.segmented)
             Picker("세로", selection: $vAlign) {
-                Text("위").tag("top")
-                Text("가운데").tag("middle")
-                Text("아래").tag("bottom")
+                Text("위").tag(VAlign.top)
+                Text("가운데").tag(VAlign.middle)
+                Text("아래").tag(VAlign.bottom)
             }
             .pickerStyle(.segmented)
             NumberSlider(title: "가로 여백", value: $marginX, range: 0...screenList.maxMarginX)
@@ -741,7 +740,7 @@ struct LanguageGroup: View {
 
     private static let dragType = "io.github.hikijun97.cheatime.language"
 
-    private var showsFlag: Bool { style.content == "flag" && modes.allSatisfy { modeRegion($0) != nil } }
+    private var showsFlag: Bool { style.content == .flag && modes.allSatisfy { modeRegion($0) != nil } }
 
     private var hideAll: Binding<Bool> {
         Binding(get: { hidden }, set: { value in
@@ -852,7 +851,7 @@ struct ModeRow<Name: View, Menu: View>: View {
         LanguageColumns(
             name: name,
             label: Group {
-                if style.content == "flag" {
+                if style.content == .flag {
                     flagMenu
                 } else {
                     TextField("표시 글자", text: $label).labelsHidden().roundedInputBorder()
@@ -869,7 +868,7 @@ struct ModeRow<Name: View, Menu: View>: View {
 
     private var hidden: Bool { ownHidden ?? langHidden }
 
-    private var showsFlag: Bool { style.content == "flag" && (region ?? defaultRegion(source.lang)) != nil }
+    private var showsFlag: Bool { style.content == .flag && (region ?? defaultRegion(source.lang)) != nil }
 
     private var flagMenu: some View {
         let automatic = defaultRegion(source.lang)
