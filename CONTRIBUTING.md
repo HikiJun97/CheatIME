@@ -9,13 +9,18 @@ Thanks for your interest in CheatIME. Bug reports, fixes, new features, and tran
 - **Larger changes**, such as new features, new settings, or refactoring: open an issue first, so we can agree on the approach before you spend time on it.
 - **Translations:** see [Translations](#translations).
 
+### Branches
+
+- **`dev`** collects the changes for the next release. Every pull request goes here.
+- **`main`** holds released code only. After testing the app built from `dev`, a maintainer merges `dev` into `main` and tags the release.
+
 ### Pull requests
 
-1. Fork the repository and create a branch from `main`.
+1. Fork the repository and create a branch from `dev`.
 2. Keep each pull request to one change.
 3. Write commit messages in English, in the imperative mood: `Add …`, `Fix …`, `Show …`.
 4. There are no automated tests. Install your build with `make install`, try the change in the app, and write in the pull request what you checked: your macOS version and the input sources you tried.
-5. Open the pull request against `main`. CI builds every pull request, and the build must pass. For first-time contributors, a maintainer approves the CI run first.
+5. Open the pull request against `dev`. CI builds every pull request, and the build must pass. For first-time contributors, a maintainer approves the CI run first.
 
 By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).
 
@@ -72,10 +77,11 @@ CheatIME is about input languages, so docs and UI in more languages are especial
 
 ## Release
 
-1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`.
-2. Merge into `main`, then push a tag that matches the version, for example `v1.2.0`.
-3. GitHub Actions (`.github/workflows/release.yml`, `xcode-27` runner) checks that the tag matches `Info.plist`, signs the app, builds the DMG, ZIP, and `SHA256SUMS.txt`, and creates a draft release using `.github/release-notes.md`.
-4. Fill in "What's new" on the draft and publish it.
+1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist` with a pull request to `dev`.
+2. Install the app built from `dev` with `make install` and test it.
+3. Merge `dev` into `main` with a pull request, then push a tag on `main` that matches the version, for example `v1.2.0`.
+4. GitHub Actions (`.github/workflows/release.yml`, `xcode-27` runner) checks that the tag matches `Info.plist`, signs the app, builds the DMG, ZIP, and `SHA256SUMS.txt`, and creates a draft release using `.github/release-notes.md`.
+5. Fill in "What's new" on the draft and publish it.
 
 Builds are not notarized. Pull requests run the same build, ad-hoc signed, without creating a release.
 
