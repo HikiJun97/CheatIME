@@ -12,7 +12,8 @@ Thanks for your interest in CheatIME. Bug reports, fixes, new features, and tran
 ### Branches
 
 - **`dev`** collects the changes for the next release. Every pull request goes here.
-- **`main`** holds released code only. After testing the app built from `dev`, a maintainer merges `dev` into `main` and tags the release.
+- **`main`** holds released code only. After testing the app built from `dev`, a maintainer fast-forwards `main` to `dev` and tags the release.
+- **History stays linear.** Pull requests are merged with **Rebase and merge**, and merged branches are deleted automatically. Keep your branch up to date by rebasing it onto `dev` (`git rebase origin/dev`, then `git push --force-with-lease`) instead of merging `dev` into it.
 
 ### Pull requests
 
@@ -80,7 +81,7 @@ CheatIME is about input languages, so docs and UI in more languages are especial
 
 1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist` with a pull request to `dev`.
 2. Install the app built from `dev` with `make install` and test it.
-3. Merge `dev` into `main` with a pull request, then push a tag on `main` that matches the version, for example `v1.2.0`.
+3. Fast-forward `main` to `dev` with `git fetch origin && git push origin origin/dev:main`, then push a tag on `main` that matches the version, for example `v1.2.0`. Don't use a pull request for this step: **Rebase and merge** always creates new commits, so `main` and `dev` would stop sharing history.
 4. GitHub Actions (`.github/workflows/release.yml`, `xcode-27` runner) checks that the tag matches `Info.plist`, signs the app, builds the DMG, ZIP, and `SHA256SUMS.txt`, and creates a draft release using `.github/release-notes.md`.
 5. Fill in "What's new" on the draft and publish it.
 
