@@ -152,6 +152,7 @@ final class BadgeHost: NSHostingView<BadgeView> {
     private var start = NSPoint.zero
     private var origin = NSPoint.zero
     private var dragging = false
+    private var snaps = false
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -160,6 +161,7 @@ final class BadgeHost: NSHostingView<BadgeView> {
         start = NSEvent.mouseLocation
         origin = window?.frame.origin ?? .zero
         dragging = false
+        snaps = UserDefaults.standard.bool(forKey: K.snapToEdges)
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -169,13 +171,18 @@ final class BadgeHost: NSHostingView<BadgeView> {
         dragging = true
         guard let window else { return }
         let o = NSPoint(x: origin.x + dx, y: origin.y + dy)
-        window.setFrameOrigin(UserDefaults.standard.bool(forKey: K.snapToEdges) ? snapped(o, size: window.frame.size) : o)
+        window.setFrameOrigin(snaps ? snapped(o, size: window.frame.size) : o)
+    }
+
+    func badgeFrame(origin: NSPoint, size: NSSize) -> (frame: NSRect, screen: NSScreen?) {
+        let f = NSRect(origin: origin, size: size).insetBy(dx: rootView.inset, dy: rootView.inset)
+        let center = NSPoint(x: f.midX, y: f.midY)
+        return (f, NSScreen.screens.first { $0.frame.contains(center) })
     }
 
     private func snapped(_ o: NSPoint, size: NSSize) -> NSPoint {
-        let f = NSRect(origin: o, size: size).insetBy(dx: rootView.inset, dy: rootView.inset)
-        let center = NSPoint(x: f.midX, y: f.midY)
-        guard let v = NSScreen.screens.first(where: { $0.frame.contains(center) })?.visibleFrame else { return o }
+        let (f, screen) = badgeFrame(origin: o, size: size)
+        guard let v = screen?.visibleFrame else { return o }
         return NSPoint(x: o.x + Self.pull(f.minX, f.maxX, toward: v.minX, v.maxX),
                        y: o.y + Self.pull(f.minY, f.maxY, toward: v.minY, v.maxY))
     }
@@ -434,11 +441,8 @@ final class Overlay {
     }
 
     private func savePosition(of panel: NSPanel) {
-        let inset = (panel.contentView as! BadgeHost).rootView.inset
-        let f = panel.frame.insetBy(dx: inset, dy: inset)
-        let center = NSPoint(x: f.midX, y: f.midY)
-        guard let v = (NSScreen.screens.first { $0.frame.contains(center) } ?? panel.screen)?.visibleFrame
-        else { return }
+        let (f, screen) = (panel.contentView as! BadgeHost).badgeFrame(origin: panel.frame.origin, size: panel.frame.size)
+        guard let v = (screen ?? panel.screen)?.visibleFrame else { return }
         let left = f.midX < v.midX, bottom = f.midY < v.midY
         let d = UserDefaults.standard
         d.set(left ? "left" : "right", forKey: K.hAlign)
