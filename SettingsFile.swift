@@ -5,11 +5,14 @@ enum SettingsFile {
     private static let app = "CheatIME"
     private static let version = 1
 
-    private static var domain: String { Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName }
+    private static func portable(_ key: String) -> Bool {
+        K.portable[key] != nil || key.hasPrefix("lang.") || key.hasPrefix("mode.")
+    }
 
     private static func exported(_ key: String, _ value: Any) -> Bool {
+        guard portable(key) else { return false }
         if let expected = K.portable[key] { return sameType(value, expected) }
-        return (key.hasPrefix("lang.") || key.hasPrefix("mode.")) && (value is String || value is NSNumber)
+        return value is String || value is NSNumber
     }
 
     private static func sameType(_ value: Any, _ expected: Any) -> Bool {
@@ -23,8 +26,7 @@ enum SettingsFile {
     private static func isBool(_ n: NSNumber) -> Bool { CFGetTypeID(n) == CFBooleanGetTypeID() }
 
     static func data() throws -> Data {
-        let saved = UserDefaults.standard.persistentDomain(forName: domain) ?? [:]
-        let settings = saved.filter { exported($0.key, $0.value) }
+        let settings = savedSettings().filter { exported($0.key, $0.value) }
         return try JSONSerialization.data(withJSONObject: ["app": app, "version": version, "settings": settings],
                                           options: [.prettyPrinted, .sortedKeys])
     }
@@ -39,7 +41,7 @@ enum SettingsFile {
 
     static func apply(_ settings: [String: Any]) {
         let d = UserDefaults.standard
-        for (key, value) in d.persistentDomain(forName: domain) ?? [:] where exported(key, value) {
+        for key in savedSettings().keys where portable(key) {
             d.removeObject(forKey: key)
         }
         for (key, value) in settings where exported(key, value) {
