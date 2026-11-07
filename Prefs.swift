@@ -19,14 +19,21 @@ protocol AnyPref {
 
 extension UserDefaults {
     subscript<V>(_ p: Pref<V>) -> V {
-        get { object(forKey: p.key) as? V ?? p.value }
-        set { set(newValue, forKey: p.key) }
+        get {
+            let raw = object(forKey: p.key)
+            guard let type = V.self as? any RawRepresentable.Type else { return raw as? V ?? p.value }
+            return decode(type, raw) as? V ?? p.value
+        }
+        set { set((newValue as? any RawRepresentable)?.rawValue ?? newValue, forKey: p.key) }
     }
+}
 
-    subscript<V: RawRepresentable>(_ p: Pref<V>) -> V where V.RawValue == String {
-        get { string(forKey: p.key).flatMap { V(rawValue: $0) } ?? p.value }
-        set { set(newValue.rawValue, forKey: p.key) }
-    }
+private func decode<R: RawRepresentable>(_ type: R.Type, _ raw: Any?) -> R? {
+    (raw as? R.RawValue).flatMap { R(rawValue: $0) }
+}
+
+func savedSettings() -> [String: Any] {
+    UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName) ?? [:]
 }
 
 extension AppStorage {
@@ -138,7 +145,8 @@ enum K {
         for mode in Mode.allCases {
             prefs += [useDefault(mode), show(mode), direction(mode), gapX(mode), gapY(mode), flip(mode)] as [any AnyPref]
         }
-        var all = Dictionary(uniqueKeysWithValues: prefs.map { ($0.key, $0.stored) })
+        var all: [String: Any] = [:]
+        for p in prefs { all[p.key] = p.stored }
         for p in styleKeys {
             all[p.key] = p.stored
             for scope in scopes { all[styleKey(scope, p.key)] = p.stored }
@@ -152,24 +160,26 @@ enum K {
 
 func migrate() {
     let d = UserDefaults.standard
-    if let mode = d.string(forKey: K.positionMode) {
-        for m in Mode.allCases where d.object(forKey: K.show(m).key) == nil {
+    var saved = savedSettings()
+    if let mode = saved[K.positionMode] as? String {
+        for m in Mode.allCases where saved[K.show(m).key] == nil {
             d.set(m.rawValue == mode, forKey: K.show(m).key)
         }
         d.removeObject(forKey: K.positionMode)
     }
-    let ownStyle = ["default"] + Mode.allCases.filter { !d[K.useDefault($0)] }.map(\.rawValue)
+    let ownStyle = ["default"] + Mode.allCases.filter { !(saved[K.useDefault($0).key] as? Bool ?? true) }.map(\.rawValue)
     for p in K.styleKeys {
-        guard let legacy = d.object(forKey: p.key) else { continue }
-        for scope in ownStyle where d.object(forKey: K.styleKey(scope, p.key)) == nil {
+        guard let legacy = saved[p.key] else { continue }
+        for scope in ownStyle where saved[K.styleKey(scope, p.key)] == nil {
             d.set(legacy, forKey: K.styleKey(scope, p.key))
         }
         d.removeObject(forKey: p.key)
     }
-    if !d.bool(forKey: K.badgeSizeMigrated) {
+    saved = savedSettings()
+    if !(saved[K.badgeSizeMigrated] as? Bool ?? false) {
         for scope in K.scopes {
-            let badgeSize = K.style(scope, K.badgeSize).key
-            if d.object(forKey: badgeSize) == nil, let fontSize = d.object(forKey: K.style(scope, K.fontSize).key) as? Double {
+            let badgeSize = K.styleKey(scope, K.badgeSize.key)
+            if saved[badgeSize] == nil, let fontSize = saved[K.styleKey(scope, K.fontSize.key)] as? Double {
                 d.set((fontSize * 1.8).rounded(), forKey: badgeSize)
             }
         }
@@ -296,7 +306,7 @@ func styleScope(_ mode: Mode) -> String {
 
 func copyDefaultStyle(to mode: Mode) {
     let d = UserDefaults.standard
-    let saved = d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName) ?? [:]
+    let saved = savedSettings()
     for p in K.styleKeys where saved[K.styleKey(mode.rawValue, p.key)] == nil {
         d.set(d.object(forKey: K.styleKey("default", p.key)) ?? p.stored, forKey: K.styleKey(mode.rawValue, p.key))
     }

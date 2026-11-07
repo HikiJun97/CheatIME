@@ -125,7 +125,6 @@ extension BadgeView {
         let d = UserDefaults.standard
         let look = badgeLook(source)
         func value<V>(_ p: Pref<V>) -> V { d[K.style(scope, p)] }
-        func value<V: RawRepresentable>(_ p: Pref<V>) -> V where V.RawValue == String { d[K.style(scope, p)] }
         let badgeSize = value(K.badgeSize)
         let glass = value(K.glass)
         self.init(label: look.label,
