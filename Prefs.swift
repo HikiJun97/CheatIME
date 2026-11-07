@@ -9,13 +9,32 @@ struct Pref<Value>: AnyPref {
         self.value = value
     }
 
-    var stored: Any { (value as? any RawRepresentable)?.rawValue ?? value }
+    var stored: Any { storedForm(value) }
+}
+
+struct StylePref<Value>: AnyStylePref {
+    let name: String
+    let value: Value
+
+    init(_ name: String, _ value: Value) {
+        self.name = name
+        self.value = value
+    }
+
+    var stored: Any { storedForm(value) }
 }
 
 protocol AnyPref {
     var key: String { get }
     var stored: Any { get }
 }
+
+protocol AnyStylePref {
+    var name: String { get }
+    var stored: Any { get }
+}
+
+private func storedForm(_ value: Any) -> Any { (value as? any RawRepresentable)?.rawValue ?? value }
 
 extension UserDefaults {
     subscript<V>(_ p: Pref<V>) -> V {
@@ -24,7 +43,7 @@ extension UserDefaults {
             guard let type = V.self as? any RawRepresentable.Type else { return raw as? V ?? p.value }
             return decode(type, raw) as? V ?? p.value
         }
-        set { set((newValue as? any RawRepresentable)?.rawValue ?? newValue, forKey: p.key) }
+        set { set(storedForm(newValue), forKey: p.key) }
     }
 }
 
@@ -97,25 +116,25 @@ enum K {
     static let badgeSizeMigrated = "badgeSizeMigrated"
     static let positionMode = "positionMode"
 
-    static let content = Pref("content", BadgeContent.text)
-    static let shape = Pref("shape", BadgeShape.rounded)
-    static let fontSize = Pref("fontSize", 16.0)
-    static let badgeSize = Pref("badgeSize", 29.0)
-    static let dotSize = Pref("dotSize", 12.0)
-    static let badgeWidth = Pref("badgeWidth", 0.0)
-    static let cornerRadius = Pref("cornerRadius", 22.0)
-    static let opacity = Pref("opacity", 0.9)
-    static let glass = Pref("glass", false)
-    static let border = Pref("border", BorderStyle.none)
-    static let borderWidth = Pref("borderWidth", 2.0)
-    static let borderColor = Pref("borderColor", "#FFFFFF")
-    static let flashOnly = Pref("flashOnly", false)
-    static let flashDuration = Pref("flashDuration", 1200.0)
-    static let styleKeys: [any AnyPref] = [content, shape, fontSize, badgeSize, dotSize, badgeWidth, cornerRadius, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
+    static let content = StylePref("content", BadgeContent.text)
+    static let shape = StylePref("shape", BadgeShape.rounded)
+    static let fontSize = StylePref("fontSize", 16.0)
+    static let badgeSize = StylePref("badgeSize", 29.0)
+    static let dotSize = StylePref("dotSize", 12.0)
+    static let badgeWidth = StylePref("badgeWidth", 0.0)
+    static let cornerRadius = StylePref("cornerRadius", 22.0)
+    static let opacity = StylePref("opacity", 0.9)
+    static let glass = StylePref("glass", false)
+    static let border = StylePref("border", BorderStyle.none)
+    static let borderWidth = StylePref("borderWidth", 2.0)
+    static let borderColor = StylePref("borderColor", "#FFFFFF")
+    static let flashOnly = StylePref("flashOnly", false)
+    static let flashDuration = StylePref("flashDuration", 1200.0)
+    static let styleKeys: [any AnyStylePref] = [content, shape, fontSize, badgeSize, dotSize, badgeWidth, cornerRadius, opacity, glass, border, borderWidth, borderColor, flashOnly, flashDuration]
     static let scopes = ["default"] + Mode.allCases.map(\.rawValue)
 
     static func styleKey(_ scope: String, _ key: String) -> String { "\(scope).\(key)" }
-    static func style<V>(_ scope: String, _ p: Pref<V>) -> Pref<V> { Pref(styleKey(scope, p.key), p.value) }
+    static func style<V>(_ scope: String, _ p: StylePref<V>) -> Pref<V> { Pref(styleKey(scope, p.name), p.value) }
     static func useDefault(_ mode: Mode) -> Pref<Bool> { Pref("\(mode.rawValue).useDefault", true) }
     static func show(_ mode: Mode) -> Pref<Bool> {
         switch mode {
@@ -148,8 +167,8 @@ enum K {
         var all: [String: Any] = [:]
         for p in prefs { all[p.key] = p.stored }
         for p in styleKeys {
-            all[p.key] = p.stored
-            for scope in scopes { all[styleKey(scope, p.key)] = p.stored }
+            all[p.name] = p.stored
+            for scope in scopes { all[styleKey(scope, p.name)] = p.stored }
         }
         all[badgeLanguages] = ""
         all[badgeSizeMigrated] = false
@@ -169,17 +188,17 @@ func migrate() {
     }
     let ownStyle = ["default"] + Mode.allCases.filter { !(saved[K.useDefault($0).key] as? Bool ?? true) }.map(\.rawValue)
     for p in K.styleKeys {
-        guard let legacy = saved[p.key] else { continue }
-        for scope in ownStyle where saved[K.styleKey(scope, p.key)] == nil {
-            d.set(legacy, forKey: K.styleKey(scope, p.key))
+        guard let legacy = saved[p.name] else { continue }
+        for scope in ownStyle where saved[K.styleKey(scope, p.name)] == nil {
+            d.set(legacy, forKey: K.styleKey(scope, p.name))
         }
-        d.removeObject(forKey: p.key)
+        d.removeObject(forKey: p.name)
     }
     saved = savedSettings()
     if !(saved[K.badgeSizeMigrated] as? Bool ?? false) {
         for scope in K.scopes {
-            let badgeSize = K.styleKey(scope, K.badgeSize.key)
-            if saved[badgeSize] == nil, let fontSize = saved[K.styleKey(scope, K.fontSize.key)] as? Double {
+            let badgeSize = K.style(scope, K.badgeSize).key
+            if saved[badgeSize] == nil, let fontSize = saved[K.style(scope, K.fontSize).key] as? Double {
                 d.set((fontSize * 1.8).rounded(), forKey: badgeSize)
             }
         }
@@ -307,7 +326,7 @@ func styleScope(_ mode: Mode) -> String {
 func copyDefaultStyle(to mode: Mode) {
     let d = UserDefaults.standard
     let saved = savedSettings()
-    for p in K.styleKeys where saved[K.styleKey(mode.rawValue, p.key)] == nil {
-        d.set(d.object(forKey: K.styleKey("default", p.key)) ?? p.stored, forKey: K.styleKey(mode.rawValue, p.key))
+    for p in K.styleKeys where saved[K.styleKey(mode.rawValue, p.name)] == nil {
+        d.set(d.object(forKey: K.styleKey("default", p.name)) ?? p.stored, forKey: K.styleKey(mode.rawValue, p.name))
     }
 }
