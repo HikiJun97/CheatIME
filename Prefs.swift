@@ -28,6 +28,7 @@ enum K {
     static let vAlign = "vAlign"
     static let marginX = "marginX"
     static let marginY = "marginY"
+    static let snapToEdges = "snapToEdges"
     static let settingsTab = "settingsTab"
     static let showFixed = "showFixed"
     static let showPointer = "showPointer"
@@ -71,7 +72,7 @@ func registerDefaults() {
     var defaults: [String: Any] = [
         K.visible: true, K.displayMode: "all", K.displays: "", K.sound: false, K.rules: "[]", K.appFilter: false,
         K.filterApps: "", K.soundName: "Tink", K.hAlign: "left", K.vAlign: "bottom", K.marginX: 12.0, K.marginY: 12.0,
-        K.settingsTab: "badge", K.styleTarget: "default", K.toggleKey: -1, K.toggleModifiers: 0,
+        K.snapToEdges: true, K.settingsTab: "badge", K.styleTarget: "default", K.toggleKey: -1, K.toggleModifiers: 0,
         K.showFixed: mode == "fixed", K.showPointer: mode == "pointer", K.showCaret: mode == "caret", K.caretFallback: true,
         K.direction("pointer"): "bottomRight", K.gapX("pointer"): 16.0, K.gapY("pointer"): 16.0, K.flip("pointer"): false,
         K.direction("caret"): "right", K.gapX("caret"): 6.0, K.gapY("caret"): 6.0, K.flip("caret"): false,
