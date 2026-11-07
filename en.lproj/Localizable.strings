@@ -124,3 +124,4 @@
 "폭을 국기 비율에 맞추기" = "Fit Width to Flag Ratio";
 "입력 모드마다 쓸 국기는 기본값 탭에서 고릅니다." = "Choose the flag for each input mode in the Defaults tab.";
 "자동" = "Automatic";
+"드래그할 때 화면 가장자리에 붙이기" = "Snap to screen edges when dragging";

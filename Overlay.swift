@@ -168,7 +168,8 @@ final class BadgeHost: NSHostingView<BadgeView> {
         if !dragging && hypot(dx, dy) < 3 { return }
         dragging = true
         guard let window else { return }
-        window.setFrameOrigin(snapped(NSPoint(x: origin.x + dx, y: origin.y + dy), size: window.frame.size))
+        let o = NSPoint(x: origin.x + dx, y: origin.y + dy)
+        window.setFrameOrigin(UserDefaults.standard.bool(forKey: K.snapToEdges) ? snapped(o, size: window.frame.size) : o)
     }
 
     private func snapped(_ o: NSPoint, size: NSSize) -> NSPoint {

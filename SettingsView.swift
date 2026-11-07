@@ -554,6 +554,7 @@ struct FixedSections: View {
     @AppStorage(K.vAlign) private var vAlign = "bottom"
     @AppStorage(K.marginX) private var marginX = 12.0
     @AppStorage(K.marginY) private var marginY = 12.0
+    @AppStorage(K.snapToEdges) private var snapToEdges = true
 
     @StateObject private var screenList = ScreenList()
 
@@ -585,6 +586,7 @@ struct FixedSections: View {
             .pickerStyle(.segmented)
             NumberSlider(title: "가로 여백", value: $marginX, range: 0...screenList.maxMarginX)
             NumberSlider(title: "세로 여백", value: $marginY, range: 0...screenList.maxMarginY)
+            Toggle("드래그할 때 화면 가장자리에 붙이기", isOn: $snapToEdges)
         }
     }
 
