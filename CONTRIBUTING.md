@@ -43,7 +43,7 @@ There is no Xcode project. The `Makefile` calls `swiftc` directly.
 - **Don't use `@State`.** In the macOS 27 SDK, SwiftUI's `@State` is a macro, and the Command Line Tools don't include the SwiftUI macro plugin, so it fails to compile there. Use an `ObservableObject` with `@StateObject`, or `@AppStorage`. Keep the code buildable with the Command Line Tools alone.
 - **No code comments.** The codebase is intentionally comment-free. Explain non-obvious decisions in commit messages instead.
 - **Every input language is in scope.** CheatIME aims to work with input sources in any language. `langDefaults()` in `Prefs.swift` presets labels and colors only for Korean, Japanese, and English; every other language must keep working through the fallback (its language code), so don't add logic that assumes a fixed set of languages.
-- **Settings** are stored in `UserDefaults`. Add new keys to `K` and their defaults to `registerDefaults()` in `Prefs.swift`.
+- **Settings** are stored in `UserDefaults`. Declare each setting once in `K` in `Prefs.swift` as a `Pref` that holds its key and default, for example `static let snapToEdges = Pref("snapToEdges", true)`. Read it with `UserDefaults.standard[K.snapToEdges]` and bind it with `@AppStorage(K.snapToEdges) private var snapToEdges: Bool`, so the default is written in one place only. Use a `String` enum for a setting with a fixed set of values. Add the setting to `K.portable` so that settings export includes it. To rename or remove a key, move the old value in `migrate()`.
 
 ## Localization
 

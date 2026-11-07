@@ -113,13 +113,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let source = currentInputSourceID()
         let d = UserDefaults.standard
         let changed = lastSourceID != nil && lastSourceID != source
-        if changed, d.bool(forKey: K.sound) {
-            NSSound(named: d.string(forKey: K.soundName) ?? "Tink")?.play()
+        if changed, d[K.sound] {
+            NSSound(named: d[K.soundName])?.play()
         }
         lastSourceID = source
         if changed { overlay.flash() } else { overlay.update() }
         Hotkey.shared.update()
-        showItem.state = UserDefaults.standard.bool(forKey: K.visible) ? .on : .off
+        showItem.state = d[K.visible] ? .on : .off
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -129,7 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func toggleBadge() {
         let d = UserDefaults.standard
-        d.set(!d.bool(forKey: K.visible), forKey: K.visible)
+        d[K.visible].toggle()
     }
 
     @objc func checkForUpdates() {
@@ -155,7 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 let firstLaunch = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?.isEmpty ?? true
-registerDefaults()
+migrate()
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

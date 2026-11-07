@@ -125,3 +125,4 @@
 "입력 모드마다 쓸 국기는 기본값 탭에서 고릅니다." = "Choose the flag for each input mode in the Defaults tab.";
 "자동" = "Automatic";
 "드래그할 때 화면 가장자리에 붙이기" = "Snap to screen edges when dragging";
+"더 새로운 버전의 CheatIME에서 만든 설정 파일입니다. CheatIME를 업데이트한 뒤 다시 가져오세요." = "This settings file was made by a newer version of CheatIME. Update CheatIME, then import it again.";
